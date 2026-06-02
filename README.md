@@ -23,11 +23,14 @@ Schematic:
 Protoboard layout:
 ![Protoboard](images/protoboard.png)
 
-CNC cutting layout:
-![CNC Layout](images/cnc-layout.png)
+CNC cutting layout screenshots (Lightburn):
+![CNC Layout - 2.5mm MDF](images/LB_screenshot_1.png)
+![CNC Layout - 2mm wood](images/LB_screenshot_2.png)
 
-DXF files (for 2.5mm MDF and 2mm basswood):
-[DXF file for CNC cutting](cnc_layout.dxf)
+DXF files for CNC cutter  (I used 2.5mm MDF and 2mm Basswood + 6 & 10x2mm magnets - will add details later):
+[Basswood 2mm](dxf/Basswood_2mm_parts.dxf)
+[MDF 2.5mm](dxf/MDF_2.5mm_parts.dxf)
+
 ## Software
 
 Develop and compile this sketch in CLion using `arduino-cli` through CMake custom targets.
