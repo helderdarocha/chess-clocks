@@ -33,7 +33,8 @@ CNC cutting layout screenshots (this is what the files above look like in Lightb
 
 ## Software
 
-Develop and compile this sketch in CLion using `arduino-cli` through CMake custom targets.
+Develop and compile this sketch in CLion using `arduino-cli` through CMake custom targets. You can also
+simply use the Arduino IDE or any other IDE if you prefer (copy the Chess_Clock_i2C folder).
 
 ## Project Layout
 
@@ -82,4 +83,4 @@ Run them from the CLion target list or create Run Configurations for these targe
 arduino-cli compile --fqbn arduino:avr:nano "/Users/helderdarocha/CLionProjects/chess-clocks/Chess_Clock_i2C"
 ```
 
-If you use a different board, replace the FQBN accordingly.
+I used Arduino Nano for this project. If you use a different board, replace the FQBN accordingly.
