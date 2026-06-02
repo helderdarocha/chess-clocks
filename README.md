@@ -1,5 +1,35 @@
 # Chess Clocks (Arduino)
 
+![Chess Clock](images/chess-clock.png)
+
+## Hardware
+
+Materials used for this project:
+- Arduino Nano (or compatible)
+- 2x Adafruit 7-segment LED backpacks (I2C)
+- Buzzer
+- Buttons for each player (mounted as push buttons or seesaw switch)
+- Control buttons (start/pause/reset)
+- Pull-up resistors for buttons (10k)
+- Power supply (3x AA batteries)
+- 47uF capacitor for buzzer
+- 2200uF capacitor for power stabilization
+- Schottky diode for reverse polarity protection
+- Enclosure and seesaw switch with magnets (CNC cut)
+
+Schematic:
+![Schematic](images/schematic.png)
+
+Protoboard layout:
+![Protoboard](images/protoboard.png)
+
+CNC cutting layout:
+![CNC Layout](images/cnc-layout.png)
+
+DXF files (for 2.5mm MDF and 2mm basswood):
+[DXF file for CNC cutting](cnc_layout.dxf)
+## Software
+
 Develop and compile this sketch in CLion using `arduino-cli` through CMake custom targets.
 
 ## Project Layout
