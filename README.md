@@ -23,13 +23,13 @@ Schematic:
 Protoboard layout:
 ![Protoboard](images/protoboard.png)
 
-CNC cutting layout screenshots (Lightburn):
-![CNC Layout - 2.5mm MDF](images/LB_screenshot_1.png)
-![CNC Layout - 2mm wood](images/LB_screenshot_2.png)
+The DXF files for CNC cutter  (I used 2.5mm MDF and 2mm Basswood + 6 & 10x2mm magnets - will add details later):
+- [Basswood 2mm](dxf/Basswood_2mm_parts.dxf)
+- [MDF 2.5mm](dxf/MDF_2.5mm_parts.dxf)
 
-DXF files for CNC cutter  (I used 2.5mm MDF and 2mm Basswood + 6 & 10x2mm magnets - will add details later):
-[Basswood 2mm](dxf/Basswood_2mm_parts.dxf)
-[MDF 2.5mm](dxf/MDF_2.5mm_parts.dxf)
+- CNC cutting layout screenshots (this is what the files above look like in Lightburn):
+  ![CNC Layout - 2.5mm MDF](images/LB_screenshot_1.png)
+  ![CNC Layout - 2mm wood](images/LB_screenshot_2.png)
 
 ## Software
 
