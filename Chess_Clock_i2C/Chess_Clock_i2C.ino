@@ -229,6 +229,8 @@ bool prevPause = HIGH,
 bool prevP1 = HIGH, 
      prevP2 = HIGH;
 
+bool ignorePauseRelease = false;     
+
 // A function to detect pressed buttons
 #define PRESSED(n,p) ((n)==LOW && (p)==HIGH)
 
@@ -421,6 +423,10 @@ void handleSelectDuration(bool plusNow, bool minusNow,
 // PAUSED
 void handlePaused(bool pauseReleased, bool pauseLong) {
   checkBattery();
+  if (ignorePauseRelease) {
+    if (pauseReleased) ignorePauseRelease = false;
+    return;
+  }
   if (pauseLong) {
     enterTimeSet();
     timesetStage = 0;
@@ -499,6 +505,7 @@ void handleTimeset(bool pausePressed,
     timesetStage++;
     if (timesetStage > 1) {
       showPausedDisplays();
+      ignorePauseRelease = true;  
       state = PAUSED;
     } else {
       showTimeSetDisplay();
