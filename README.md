@@ -8,14 +8,18 @@ Materials used for this project:
 - Arduino Nano (or compatible)
 - 2x Adafruit 7-segment LED backpacks (I2C)
 - Buzzer
-- Buttons for each player (mounted as push buttons or seesaw switch)
-- Control buttons (start/pause/reset)
+- Buttons for each player (mounted as a pair of push buttons, or microswitches / seesaw switch)
+- 3 control push buttons (start/pause/reset)
 - Pull-up resistors for buttons (10k)
 - Power supply (3x AA batteries)
 - 47uF capacitor for buzzer
 - 2200uF capacitor for power stabilization
+- 100uF capacitor to reduce flicker on LED displays
+- 100nF capacitor for noise reduction
 - Schottky diode for reverse polarity protection
 - Enclosure and seesaw switch with magnets (CNC cut)
+- On/off switch
+- 3 AA battery holder and batteries
 
 Schematic:
 ![Schematic](images/schematic.png)
