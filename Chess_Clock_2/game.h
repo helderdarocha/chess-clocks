@@ -1,0 +1,53 @@
+/* ================================================================
+ * game.h — Game state machine (presets, turn timing, TIMESET, etc.)
+ *
+ * Everything about presets and the clock's internal state is kept
+ * private to game.cpp. The .ino only drives this through the small
+ * API below and never needs to know the state machine's shape.
+ *
+ * Created by Helder da Rocha on 12/07/26.
+================================================================ */
+
+//#ifndef CHESS_CLOCKS_ARDUINO_GAME_H
+//#define CHESS_CLOCKS_ARDUINO_GAME_H
+//#endif //CHESS_CLOCKS_ARDUINO_GAME_H
+#pragma once
+
+#include <Adafruit_LEDBackpack.h>
+
+// Macro to detect a button press edge (HIGH -> LOW) with INPUT_PULLUP.
+// Necessary to avoid triggering multiple times while a button is held down.
+#define PRESSED(n,p) ((n)==LOW && (p)==HIGH)
+
+// Macro to detect a released edge - needed to handle inconsistent states
+// (e.g. two switches briefly both open during a seesaw's mechanical gap).
+#define RELEASED(n,p) ((n)==HIGH && (p)==LOW)
+
+// Loads the persisted preset from EEPROM (if any), applies it, draws the
+// preset-selection screen, and enters the initial state. Call once from
+// setup(), after the displays are initialized.
+void gameInit(Adafruit_7segment &d1, Adafruit_7segment &d2);
+
+// Re-applies the current preset, redraws the preset-selection screen, plays
+// the mode-change sound, and returns to preset-selection. Used by the +/-
+// long-press reset combo.
+void gameResetToSelectDuration(Adafruit_7segment &d1, Adafruit_7segment &d2);
+
+// Advances the game state machine by one step. Call once per loop()
+// iteration (skip the call right after waking from sleep). plusNow/minusNow/
+// p1Now/p2Now and their "prev" counterparts are the raw button reads;
+// pausePressed/pauseReleased/pauseLong/pauseLongFired are the edge/hold
+// signals computed by loop()'s own PAUSE-button timing logic.
+void gameUpdate(bool plusNow, bool prevPlus, bool minusNow, bool prevMinus,
+                bool pausePressed, bool pauseReleased,
+                bool pauseLong, bool pauseLongFired,
+                bool p1Now, bool prevP1, bool p2Now, bool prevP2,
+                Adafruit_7segment &d1, Adafruit_7segment &d2);
+
+// --- Queries used by loop() for idle/sleep timing and to redraw after waking ---
+bool gameIsRunning();
+bool gameIsSelectingDuration();
+uint8_t gameGetPresetIndex();
+unsigned long gameGetPresetTimeMs();
+unsigned long gameGetPlayer1Time();
+unsigned long gameGetPlayer2Time();

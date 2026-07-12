@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ArduinoSettingsState">
-    <option name="arduinoCliPath" value="/opt/homebrew/bin/arduino-cli " />
+    <option name="arduinoCliPath" value="/opt/homebrew/bin/arduino-cli" />
     <option name="boardTarget" value="nano" />
     <option name="activeBackend" value="arduino-cli" />
     <option name="platformioPath" value="/opt/homebrew/bin/platformio " />

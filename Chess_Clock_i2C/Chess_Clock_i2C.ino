@@ -1,11 +1,5 @@
-/* Chess Clock using I2C – Version 1.5.2
- * Added hardware-based surge protection (a 2200uF capacitor)
- * Added low battery warning
- * Added reset by pressing + and - at the same time for 2 seconds
- * Added low-power mode if on and not running (wakes up after pressing any button)
- * Added BAtt LO warning at startup
- *
- ** Next version (1.6): count moves + presets for multiple rounds
+/* Chess Clock using I2C – Version 1.5.6 - For Clock models 2 and 3.
+ * New clocks should use Version 2 (see Chess_Clock_2 folder).
  *
  * @author Helder da Rocha
  */
@@ -32,11 +26,11 @@ struct TimePreset {
 #define EEPROM_PRESET_ADDR 0
 
 TimePreset presets[PRESET_COUNT] = {
-  {1,0},{1,1},{2,0},{2,1},
-  {3,0},{3,2},{5,0},{5,3},
-  {10,0},{10,5},{15,0},{15,10},
-  {30,0},{30,15},{45,0},{45,30},
-  {60,0},{60,30},{90,0},{90,30}
+{1,0},{1,1},{2,0},{2,1},
+{3,0},{3,2},{5,0},{5,3},
+{10,0},{10,5},{15,0},{15,10},
+{30,0},{30,15},{45,0},{45,30},
+{60,0},{60,30},{90,0},{90,30}
 };
 
 uint8_t preset_index = 9;
@@ -62,24 +56,37 @@ uint8_t timesetStage = 0;
 Adafruit_7segment d1;
 Adafruit_7segment d2;
 
+// Display levels
+#define DISPLAY_OFF 0
+#define DISPLAY_DIM 5
+#define DISPLAY_STD 7   // Use for white led
+#define DISPLAY_MAX 10  // Use for blue led
+#define DISPLAY_OVR 15
+
 /* ================= Power saving and battery warning variables ================= */
 
 // Low battery loop - called once per minute during RUNNING and PAUSED.
-// #define BATT_WARN_MV    3800UL   // warn when 3×AA drops below 3.8V (for circuits without Schottky)
-#define BATT_WARN_MV    3550UL   // 3800 - 250 (For circuits with Schottky 1N5817 protection between battery and 5V pin)
+// Considering 3.35V in battery + Considering avg 1.1 AREF and current circuit with IRF9530 + Schottky diode
+// #define BATT_WARN_MV    2950UL   // best for 3 AA batteries (NiMH 4.5V or Alkakine 3.6V)
+#define BATT_WARN_MV    3050UL   // best for internal Molicell M35A 3.7V LiOn battery (~2.7V on 5V pin at minimum)
 #define BATT_CHECK_MS   60000UL  // check every 60 seconds
 
 // Protection to reduce battery use when idle (not RUNNING)
 #define IDLE_TIMEOUT_MS  300000UL   // 5 minutes with no interaction and not RUNNING
 
 unsigned long lastActivityMs = 0;   // updated on every button press
+unsigned long lastRunningMs = 0;    // updated when the clock is RUNNING (for idle timeout)
 unsigned long lastBattCheckMs = 0;
 bool sleeping = false;
 
 /* ================= Game control variables ================= */
 
-// A function to detect pressed buttons
+// Macro to detect a button press edge (HIGH -> LOW) with INPUT_PULLUP
+// Necessary to avoid triggering multiple times during the loop while the button is held down
 #define PRESSED(n,p) ((n)==LOW && (p)==HIGH)
+
+// Macro to detect released edge - necessary to deal with inconsistent states (two released buttons)
+#define RELEASED(n,p) ((n)==HIGH && (p)==LOW)
 
 unsigned long base_time;
 unsigned long bonus_time;
@@ -103,15 +110,15 @@ bool includeBonusInFirstTurn = true; // if false, 10:05 will start at 10:00 and 
 
 /* ================= Control buttons ================= */
 // Pause + select + increment/decrement
-bool prevPause = HIGH, 
-     prevPlus = HIGH, 
-     prevMinus = HIGH;
+bool prevPause = HIGH,
+prevPlus = HIGH,
+prevMinus = HIGH;
 
 // Game latch
-bool prevP1 = HIGH, 
-     prevP2 = HIGH;
+bool prevP1 = HIGH,
+prevP2 = HIGH;
 
-bool ignorePauseRelease = false;     
+bool ignorePauseRelease = false;
 
 // To control increments and pausing using PAUSE button
 unsigned long pausePressTime = 0;
@@ -151,54 +158,54 @@ long readVCC_mV() {
 // Three beeps every minute if battery is low
 void lowBatteryBeep() {
   for (int i = 0; i < 3; i++) {
-    lowBatterySound();
-    delay(220);
-  }
+  lowBatterySound();
+  delay(220);
+}
 }
 
 void checkBattery() {
   unsigned long now = millis();
   if (now - lastBattCheckMs < BATT_CHECK_MS) return;
   lastBattCheckMs = now;
-  if (readVCC_mV() < BATT_WARN_MV) 
-    lowBatteryBeep();
+  if (readVCC_mV() < BATT_WARN_MV)
+  lowBatteryBeep();
 }
 
 // Show warning at startup
 void showBatteryWarning() {
   for (int i = 0; i < 2; i++) {
-    // "BAtt" on display 1, "Lo--" on display 2
-    d1.clear();
-    d1.writeDigitRaw(0, 0x7C);  // b
-    d1.writeDigitRaw(1, 0x77);  // A
-    d1.writeDigitRaw(3, 0x78);  // t
-    d1.writeDigitRaw(4, 0x78);  // t
-    d1.drawColon(false);
-    d1.writeDisplay();
+  // "BAtt" on display 1, "Lo--" on display 2
+  d1.clear();
+  d1.writeDigitRaw(0, 0x7C);  // b
+  d1.writeDigitRaw(1, 0x77);  // A
+  d1.writeDigitRaw(3, 0x78);  // t
+  d1.writeDigitRaw(4, 0x78);  // t
+  d1.drawColon(false);
+  d1.writeDisplay();
 
-    d2.clear();
-    d2.writeDigitRaw(0, 0x38);  // L
-    d2.writeDigitRaw(1, 0x5C);  // o
-    d2.writeDigitRaw(3, 0x40);  // -
-    d2.writeDigitRaw(4, 0x40);  // -
-    d2.drawColon(false);
-    d2.writeDisplay();
+  d2.clear();
+  d2.writeDigitRaw(0, 0x38);  // L
+  d2.writeDigitRaw(1, 0x5C);  // o
+  d2.writeDigitRaw(3, 0x40);  // -
+  d2.writeDigitRaw(4, 0x40);  // -
+  d2.drawColon(false);
+  d2.writeDisplay();
 
-    lowBatteryBeep();            // beep while showing the warning
+  lowBatteryBeep();            // beep while showing the warning
 
-    // blank both displays between flashes
-    d1.clear(); d1.writeDisplay();
-    d2.clear(); d2.writeDisplay();
-    delay(300);
-  }
+  // blank both displays between flashes
+  d1.clear(); d1.writeDisplay();
+  d2.clear(); d2.writeDisplay();
+  delay(300);
+}
 }
 
 // Tries to reduce battery use by turning off everything that is possible (when not RUNNING)
 // See https://forum.arduino.cc/t/what-to-turn-off-and-how/79151/9
 void goToSleep() {
   // Blank both displays
-  d1.setBrightness(0); d1.clear(); d1.writeDisplay();
-  d2.setBrightness(0); d2.clear(); d2.writeDisplay();
+  d1.setBrightness(DISPLAY_OFF); d1.clear(); d1.writeDisplay();
+  d2.setBrightness(DISPLAY_OFF); d2.clear(); d2.writeDisplay();
   sleeping = true;
 
   // Enable pin-change interrupts on all five buttons so any one wakes the CPU.
@@ -229,17 +236,17 @@ void goToSleep() {
   power_usart0_enable();
 
   // Restore displays
-  d1.setBrightness(10); d2.setBrightness(10);
+  d1.setBrightness(DISPLAY_DIM); d2.setBrightness(DISPLAY_DIM);
   sleeping = false;
   justWokeUp = true;
   lastActivityMs = millis();
 
   // Redraw whatever was showing before sleep
   if (state == SELECT_DURATION) {
-    showPresetSelect(preset_index);
-  } else {
-    showPausedDisplays();
-  }
+  showPresetSelect(preset_index);
+} else {
+  showPausedDisplays();
+}
 }
 
 // Empty ISRs needed to wake the CPU
@@ -249,52 +256,52 @@ ISR(PCINT2_vect) {}
 
 /* ================= Sounds ================= */
 
-void clickSound()   { 
-  tone(BUZZER, 2000, 40); 
+void clickSound()   {
+tone(BUZZER, 2000, 40);
 }
 void modeSound()    {
-  tone(BUZZER, 1500, 80); 
+tone(BUZZER, 1500, 80);
 }
-void startSound()   { 
-  tone(BUZZER, 2500, 120); 
+void startSound()   {
+tone(BUZZER, 2500, 120);
 }
-void enterTimeSet() { 
-  tone(BUZZER, 1000, 120); 
+void enterTimeSet() {
+tone(BUZZER, 1000, 120);
 }
 void lowBatterySound() {
-  tone(BUZZER, 400, 120);
+tone(BUZZER, 400, 120);
 }
 
 /* ---------- Game Over Melody ---------- */
 
 int NOTES = 44;
 const int melody[] PROGMEM = {
-  G4, G4, G4, DS4, AS4, G4, DS4, AS4, G4,
-  D5, D5, D5, DS5, AS4, FS4, DS4, AS5, G4,
-  G5, G4, G4, G5, FS5, F5, E5, DS5, E5, ZZ,
-  GS4, CS5, C5, B5, AS5, A5, AS5, ZZ,
-  DS4, FS4, DS4, AS4, G4, DS4, AS5, G4
+G4, G4, G4, DS4, AS4, G4, DS4, AS4, G4,
+D5, D5, D5, DS5, AS4, FS4, DS4, AS5, G4,
+G5, G4, G4, G5, FS5, F5, E5, DS5, E5, ZZ,
+GS4, CS5, C5, B5, AS5, A5, AS5, ZZ,
+DS4, FS4, DS4, AS4, G4, DS4, AS5, G4
 };
 
 const int durations[] PROGMEM = {
-  4,4,4,6,12,4,6,12,2,
-  4,4,4,6,12,4,6,12,2,
-  4,6,8,4,6,8,16,16,8,8,
-  8,4,6,8,16,16,8,8,
-  8,4,6,8,4,6,8,2
+4,4,4,6,12,4,6,12,2,
+4,4,4,6,12,4,6,12,2,
+4,6,8,4,6,8,16,16,8,8,
+8,4,6,8,16,16,8,8,
+8,4,6,8,4,6,8,2
 };
 
 void gameOverTune() {
   for (int i = 0; i < NOTES; i++) {
-      int note = pgm_read_word(&melody[i]);
-      int dur  = pgm_read_word(&durations[i]);
+  int note = pgm_read_word(&melody[i]);
+  int dur  = pgm_read_word(&durations[i]);
 
-      int duration = 1000 / dur;
-      if (note != ZZ)
-          tone(BUZZER, note * 4, duration);
-      delay(duration * 1.3);
-      noTone(BUZZER);
-  }
+  int duration = 1000 / dur;
+  if (note != ZZ)
+  tone(BUZZER, note * 4, duration);
+  delay(duration * 1.3);
+  noTone(BUZZER);
+}
 }
 
 /* ================= Game helper functions ================= */
@@ -337,21 +344,21 @@ void showPausedDisplays() {
 // Set the time for each player
 void showTimeSetDisplay() {
   if (timesetStage == 0) {
-    // Editing Player 1
-    updateDisplay(d1, player1_time);
+  // Editing Player 1
+  updateDisplay(d1, player1_time);
 
-    d2.clear();
-    d2.drawColon(false);
-    d2.writeDisplay();
-  }
+  d2.clear();
+  d2.drawColon(false);
+  d2.writeDisplay();
+}
   else {
-    // Editing Player 2
-    updateDisplay(d2, player2_time);
+  // Editing Player 2
+  updateDisplay(d2, player2_time);
 
-    d1.clear();
-    d1.drawColon(false);
-    d1.writeDisplay();
-  }
+  d1.clear();
+  d1.drawColon(false);
+  d1.writeDisplay();
+}
 }
 
 // Apply preset before starting game
@@ -366,51 +373,51 @@ void applyPreset() {
 /* ================= State functions - called during LOOP in switch ================= */
 // SELECT_DURATION
 void handleSelectDuration(bool plusNow, bool minusNow,
-                          bool prevPlus, bool prevMinus,
-                          bool pauseReleased) {
+bool prevPlus, bool prevMinus,
+bool pauseReleased) {
   if (PRESSED(plusNow, prevPlus)) {
-    preset_index = (preset_index + 1) % PRESET_COUNT;
-    EEPROM.update(EEPROM_PRESET_ADDR, preset_index);
-    clickSound();
-    showPresetSelect(preset_index);
-  }
+  preset_index = (preset_index + 1) % PRESET_COUNT;
+  EEPROM.update(EEPROM_PRESET_ADDR, preset_index);
+  clickSound();
+  showPresetSelect(preset_index);
+}
   if (PRESSED(minusNow, prevMinus)) {
-    preset_index = (preset_index + PRESET_COUNT - 1) % PRESET_COUNT;
-    EEPROM.update(EEPROM_PRESET_ADDR, preset_index);
-    clickSound();
-    showPresetSelect(preset_index);
-  }
+  preset_index = (preset_index + PRESET_COUNT - 1) % PRESET_COUNT;
+  EEPROM.update(EEPROM_PRESET_ADDR, preset_index);
+  clickSound();
+  showPresetSelect(preset_index);
+}
   if (pauseReleased) {
-    applyPreset();
-    showPausedDisplays();
-    state = PAUSED;
-  }
+  applyPreset();
+  showPausedDisplays();
+  state = PAUSED;
+}
 }
 
 // PAUSED
 void handlePaused(bool pauseReleased, bool pauseLong) {
   checkBattery();
   if (ignorePauseRelease) {
-    if (pauseReleased) ignorePauseRelease = false;
-    return;
-  }
+  if (pauseReleased) ignorePauseRelease = false;
+  return;
+}
   if (pauseLong) {
-    enterTimeSet();
-    timesetStage = 0;
-    showTimeSetDisplay();
-    state = TIMESET;
-  } else if (pauseReleased) {
-    player1_turn    = isPlayer1Turn();
-    turn_start_time = millis();
-    startSound();
-    state = RUNNING;
-  }
+  enterTimeSet();
+  timesetStage = 0;
+  showTimeSetDisplay();
+  state = TIMESET;
+} else if (pauseReleased) {
+  player1_turn    = isPlayer1Turn();
+  turn_start_time = millis();
+  startSound();
+  state = RUNNING;
+}
 }
 
 // RUNNING
 void handleRunning(bool pauseReleased, bool pauseLongFired,
-                   bool p1Now, bool p2Now,
-                   bool prevP1, bool prevP2) {
+bool p1Now, bool p2Now,
+bool prevP1, bool prevP2) {
   checkBattery();
   unsigned long elapsed = millis() - turn_start_time;
 
@@ -419,90 +426,92 @@ void handleRunning(bool pauseReleased, bool pauseLongFired,
   unsigned long       *tracker       = player1_turn ? &lastDrawnSeconds1 : &lastDrawnSeconds2;
 
   if (*activeTime > elapsed) {
-    unsigned long remaining = *activeTime - elapsed;
-    unsigned long secs      = remaining / 1000;
-    if (secs != *tracker) {
-      updateDisplay(*activeDisplay, remaining);
-      *tracker = secs;
-    }
-  } else {
-    updateDisplay(*activeDisplay, 0);
-    gameOverPlayed = false;
-    state = GAME_OVER;
-    return;
-  }
+  unsigned long remaining = *activeTime - elapsed;
+  unsigned long secs      = remaining / 1000;
+  if (secs != *tracker) {
+  updateDisplay(*activeDisplay, remaining);
+  *tracker = secs;
+}
+} else {
+  updateDisplay(*activeDisplay, 0);
+  gameOverPlayed = false;
+  state = GAME_OVER;
+  return;
+}
 
-  if (player1_turn && PRESSED(p1Now, prevP1)) {
-    *activeTime  = (*activeTime > elapsed) ? *activeTime - elapsed : 0;
-    *activeTime += bonus_time;
-    lastDrawnSeconds1 = ULONG_MAX;
-    lastDrawnSeconds2 = ULONG_MAX;
-    updateDisplay(d1, *activeTime);
-    updateDisplay(d2, player2_time);
-    player1_turn    = false;
-    turn_start_time = millis();
-  }
+  // Turn ends when the active player's own switch fully latches (normal case)
+  // OR when the switch currently holding this turn releases, even if the
+  // opposite switch never fully latches (seesaw stuck in the mechanical gap).
+  // Scoping by player1_turn prevents a stray press on the "wrong" switch
+  // from re-triggering a flip after the turn has already changed.
+  bool turnEnded = player1_turn
+  ? (PRESSED(p1Now, prevP1) || RELEASED(p2Now, prevP2))
+  : (PRESSED(p2Now, prevP2) || RELEASED(p1Now, prevP1));
 
-  if (!player1_turn && PRESSED(p2Now, prevP2)) {
-    *activeTime  = (*activeTime > elapsed) ? *activeTime - elapsed : 0;
-    *activeTime += bonus_time;
-    lastDrawnSeconds1 = ULONG_MAX;
-    lastDrawnSeconds2 = ULONG_MAX;
-    updateDisplay(d2, *activeTime);
-    updateDisplay(d1, player1_time);
-    player1_turn    = true;
-    turn_start_time = millis();
-  }
+  if (turnEnded && elapsed > 60) {
+  *activeTime  = (*activeTime > elapsed) ? *activeTime - elapsed : 0;
+  *activeTime += bonus_time;
+  lastDrawnSeconds1 = ULONG_MAX;
+  lastDrawnSeconds2 = ULONG_MAX;
+  updateDisplay(*activeDisplay, *activeTime);
+
+  player1_turn = !player1_turn;
+  turn_start_time = millis();
+
+  unsigned long *otherTime = player1_turn ? &player1_time : &player2_time;
+  Adafruit_7segment *otherDisplay = player1_turn ? &d1 : &d2;
+  updateDisplay(*otherDisplay, *otherTime);
+}
 
   if (pauseReleased && !pauseLongFired) {
-    *activeTime = (*activeTime > elapsed) ? *activeTime - elapsed : 0;
-    lastDrawnSeconds1 = ULONG_MAX;
-    lastDrawnSeconds2 = ULONG_MAX;
-    updateDisplay(*activeDisplay, *activeTime);
-    modeSound();
-    state = PAUSED;
-  }
+  *activeTime = (*activeTime > elapsed) ? *activeTime - elapsed : 0;
+  lastDrawnSeconds1 = ULONG_MAX;
+  lastDrawnSeconds2 = ULONG_MAX;
+  updateDisplay(*activeDisplay, *activeTime);
+  modeSound();
+  state = PAUSED;
+}
 }
 
 // TIMESET
 void handleTimeset(bool pausePressed,
-                   bool plusNow,  bool prevPlus,
-                   bool minusNow, bool prevMinus) {
+bool plusNow,  bool prevPlus,
+bool minusNow, bool prevMinus) {
   if (pausePressed) {
-    timesetStage++;
-    if (timesetStage > 1) {
-      showPausedDisplays();
-      ignorePauseRelease = true;  
-      state = PAUSED;
-    } else {
-      showTimeSetDisplay();
-    }
-  }
+  timesetStage++;
+  if (timesetStage > 1) {
+  showPausedDisplays();
+  ignorePauseRelease = true;
+  state = PAUSED;
+} else {
+  showTimeSetDisplay();
+}
+}
   if (PRESSED(plusNow, prevPlus)) {
-    clickSound();
-    if (timesetStage == 0) player1_time += 60000UL;
-    else                   player2_time += 60000UL;
-    showTimeSetDisplay();
-  }
+  clickSound();
+  if (timesetStage == 0) player1_time += 60000UL;
+  else                   player2_time += 60000UL;
+  showTimeSetDisplay();
+}
   if (PRESSED(minusNow, prevMinus)) {
-    clickSound();
-    unsigned long &t = (timesetStage == 0) ? player1_time : player2_time;
-    if (t >= 60000UL) t -= 60000UL;
-    showTimeSetDisplay();
-  }
+  clickSound();
+  unsigned long &t = (timesetStage == 0) ? player1_time : player2_time;
+  if (t >= 60000UL) t -= 60000UL;
+  showTimeSetDisplay();
+}
 }
 
 // GAME_OVER
 void handleGameOver(bool pauseReleased) {
   if (!gameOverPlayed) {
-    gameOverTune();
-    gameOverPlayed = true;
-  }
+  gameOverTune();
+  gameOverPlayed = true;
+}
   if (pauseReleased) {
-    applyPreset();
-    showPausedDisplays();
-    state = PAUSED;
-  }
+  applyPreset();
+  showPausedDisplays();
+  state = PAUSED;
+}
 }
 
 //////////// ARDUINO CONTROL - setup() and loop() //////////////////
@@ -511,7 +520,7 @@ void handleGameOver(bool pauseReleased) {
 
 void setup() {
   // Player lever
-  pinMode(PLY1, INPUT_PULLUP);
+  pinMode(PLY1, INPUT_PULLUP); // I am also using a 10k pull-up (for a lower resistance)
   pinMode(PLY2, INPUT_PULLUP);
 
   // Control buttons
@@ -526,8 +535,8 @@ void setup() {
   Wire.begin();
   d1.begin(DISPLAY_ADDRESS_1);
   d2.begin(DISPLAY_ADDRESS_2);
-  d1.setBrightness(10);
-  d2.setBrightness(10);
+  d1.setBrightness(DISPLAY_DIM);
+  d2.setBrightness(DISPLAY_DIM);
 
   // Warn if battery is low!
   if (readVCC_mV() < BATT_WARN_MV) showBatteryWarning();
@@ -557,72 +566,84 @@ void loop() {
 
   // Pause was pressed
   if (pausePressed) {
-    pausePressTime = millis();
-    pauseLongFired = false;
-  }
+  pausePressTime = millis();
+  pauseLongFired = false;
+}
 
   // Long pause was pressed - to increment or decrement user time
   bool pauseLong = false;
-  if (pauseNow == LOW && !pauseLongFired && millis() - pausePressTime >= 2000) {
-    pauseLong      = true;
-    pauseLongFired = true;
-  }
+  if (pauseNow == LOW && !pauseLongFired
+  && millis() - pausePressTime >= 2000) {
+  pauseLong      = true;
+  pauseLongFired = true;
+}
 
   // + and - buttons were pressed to reset the clock
   bool resetCombo = (plusNow == LOW && minusNow == LOW);
   if (resetCombo && !resetLongFired && resetPressTime == 0) {
-    resetPressTime = millis();
-  }
+  resetPressTime = millis();
+}
   if (!resetCombo) {
-    resetPressTime = 0;
-    resetLongFired = false;
-  }
+  resetPressTime = 0;
+  resetLongFired = false;
+}
   bool resetLong = false;
-  if (resetCombo && !resetLongFired && resetPressTime > 0
-      && millis() - resetPressTime >= 1000) {
-    resetLong      = true;
-    resetLongFired = true;
-  }
+  if (resetCombo && !resetLongFired
+  && resetPressTime > 0
+  && millis() - resetPressTime >= 1000) {
+  resetLong      = true;
+  resetLongFired = true;
+}
 
-  // A button was pressed to wake up the clock after sleep mode
-  if (pausePressed || PRESSED(plusNow, prevPlus) || PRESSED(minusNow, prevMinus)
-      || PRESSED(p1Now, prevP1) || PRESSED(p2Now, prevP2)) {
-    lastActivityMs = millis();
-  }
+  // A button was pressed to wake up the clock after sleep mode (pause, plus/minus or player levers)
+  if (pausePressed || PRESSED(plusNow, prevPlus)
+  || PRESSED(minusNow, prevMinus)
+  || PRESSED(p1Now, prevP1)
+  || PRESSED(p2Now, prevP2)) {
+  lastActivityMs = millis();
+}
 
   if (resetLong && state != RUNNING) {
-    applyPreset();
-    showPresetSelect(preset_index);
-    modeSound();
-    state = SELECT_DURATION;
-  }
+  applyPreset();
+  showPresetSelect(preset_index);
+  modeSound();
+  state = SELECT_DURATION;
+}
 
+  if (state == RUNNING) {
+  lastRunningMs = millis();  // used to calculate idle timeout
+}
+
+  // will sleep if idle for too long and not running (wakes up on any button press)
+  // if the clock was running, and just changed state automatically (game over), it will wait IDLE_TIMEOUT_MS
+  // before sleeping, to give the user a chance to see the result and hear the game over tune.
   if (!sleeping && state != RUNNING
-      && millis() - lastActivityMs > IDLE_TIMEOUT_MS) {
-    goToSleep();
-  }
+  && millis() - lastActivityMs > IDLE_TIMEOUT_MS
+  && millis() - lastRunningMs > IDLE_TIMEOUT_MS) {
+  goToSleep();
+}
 
   if (justWokeUp) {
-    justWokeUp = false;
-  } else {
-    switch (state) {
-      case SELECT_DURATION:
-        handleSelectDuration(plusNow, minusNow, prevPlus, prevMinus, pauseReleased);
-        break;
-      case PAUSED:
-        handlePaused(pauseReleased, pauseLong);
-        break;
-      case RUNNING:
-        handleRunning(pauseReleased, pauseLongFired, p1Now, p2Now, prevP1, prevP2);
-        break;
-      case TIMESET:
-        handleTimeset(pausePressed, plusNow, prevPlus, minusNow, prevMinus);
-        break;
-      case GAME_OVER:
-        handleGameOver(pauseReleased);
-        break;
-    }
-  }
+  justWokeUp = false;
+} else {
+  switch (state) {
+  case SELECT_DURATION:
+  handleSelectDuration(plusNow, minusNow, prevPlus, prevMinus, pauseReleased);
+  break;
+  case PAUSED:
+  handlePaused(pauseReleased, pauseLong);
+  break;
+  case RUNNING:
+  handleRunning(pauseReleased, pauseLongFired, p1Now, p2Now, prevP1, prevP2);
+  break;
+  case TIMESET:
+  handleTimeset(pausePressed, plusNow, prevPlus, minusNow, prevMinus);
+  break;
+  case GAME_OVER:
+  handleGameOver(pauseReleased);
+  break;
+}
+}
 
   if (pauseNow == HIGH) pauseLongFired = false;
 
