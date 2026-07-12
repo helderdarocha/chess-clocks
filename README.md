@@ -1,7 +1,7 @@
 # Chess Clocks (Arduino)
 
 ![Chess Clock 2](images/chess-clock_2.png)
-![Chess Clock 3](images/chess-clock_2.png)
+![Chess Clock 3](images/chess-clock_3.png)
 
 20 presets for different time controls, including increment. Long pause allows adding or removing time during
 a game. Sleep mode for power saving (after 5 minutes of inactivity). Optional DS3231 RTC module for
