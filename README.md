@@ -46,8 +46,10 @@ The DXF files for CNC cutter:
 CNC cutting layout screenshot (this is what the file above looks like in Lightburn):
   ![CNC Layout - screenshot](images/LB_screenshot.png)
 
-Circuit in the case
+Circuit in the case (Clock 2)
 ![Clock 2](images/open_clock_2.jpeg)
+
+Circuit in the case during programming (Clock 3)
 ![Clock 2](images/open_clock_3.jpeg)
 
 ## Software
