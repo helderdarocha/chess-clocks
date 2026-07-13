@@ -58,6 +58,9 @@ CNC cutting layout screenshot for Clock 3 (this is what the file above looks lik
 Circuit in the case (Clock 2 - old model)
 ![Clock 2](images/open_clock_2.jpeg)
 
+Prototyping Clock 3
+![Clock 3](images/proto_3.jpeg)
+
 Circuit in the (new) case during programming (Clock 3)
 ![Clock 2](images/open_clock_3.jpeg)
 
