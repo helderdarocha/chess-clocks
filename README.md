@@ -55,13 +55,19 @@ The DXF files for CNC cutter (Clock 3):
 CNC cutting layout screenshot for Clock 3 (this is what the file above looks like in Lightburn):
   ![CNC Layout - screenshot](images/LB_screenshot.png)
 
-Circuit in the case (Clock 2 - old model)
+Circuit in the case (Clock 2 - old model). Programming is possible via the USB port of the Arduino Nano. 
+The case is closed by pressing the halves together. Repairing is harder than Clock 3 and there are too
+many wires.
 ![Clock 2](images/open_clock_2.jpeg)
 
-Prototyping Clock 3
+Prototyping Clock 3. It uses a seesaw mechanism with 2 microswitches and magnets. The magnets are not used for
+switching (I did not use a reed, as is common in many clocks), but to attract the seesaw switch to the left or right side. 
+Any slight movement of the seesaw switch will trigger a button press.
 ![Clock 3](images/proto_3.jpeg)
 
-Circuit in the (new) case during programming (Clock 3)
+Circuit in the (new) case during programming (Clock 3). Four rubber feet glued to screws are used to place
+the lower cover. It still takes a long time to assemble, but it is easier to repair than the old model.
+Programming requires an FTDI adapter, since it uses a Pro Mini. There are still too many wires (I need to design a PCB).
 ![Clock 2](images/open_clock_3.jpeg)
 
 ## Software
