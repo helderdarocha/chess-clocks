@@ -11,6 +11,8 @@ The case was CNC-cut from 2mm basswood. The seesaw switch is mounted on the top 
 the switch to the left or right side. Two microswitches are mounted under the seesaw switch to detect which side is pressed.
 Any slight movement of the seesaw switch will trigger a button press. The case was decorated with 0.5mm wood sheets.
 
+The old model (Clock 2) uses a 3xAA battery pack and pull-up resistors. The new model (Clock 3) uses a Li-ion battery with a TP4056 charger module.
+
 ## Hardware
 
 Materials used for this project:
@@ -32,24 +34,24 @@ Materials used for this project:
 - Enclosure and seesaw switch with magnets (CNC cut)
 - On/off switch
 
-Schematic (showing Li-on battery circuit - Clock 3):
+Schematic for Clock 3:
 ![Schematic](images/schematic.png)
 
-Protoboard layout (showing 3xAA battery circuit - Clock 2):
+Protoboard layout for Clock 2 (I still didn't make one for Clock 3):
 ![Protoboard](images/protoboard.png)
 
 ## Case design
-The DXF files for CNC cutter:
+The DXF files for CNC cutter (Clock 3):
 - [2mm Basswood - 1.8mm slots](dxf/2mm-basswood.dxf)
 - [2mm Acrylic - 2mm slots](dxf/2mm-acrylic.dxf)
 
-CNC cutting layout screenshot (this is what the file above looks like in Lightburn):
+CNC cutting layout screenshot for Clock 3 (this is what the file above looks like in Lightburn):
   ![CNC Layout - screenshot](images/LB_screenshot.png)
 
-Circuit in the case (Clock 2)
+Circuit in the case (Clock 2 - old model)
 ![Clock 2](images/open_clock_2.jpeg)
 
-Circuit in the case during programming (Clock 3)
+Circuit in the (new) case during programming (Clock 3)
 ![Clock 2](images/open_clock_3.jpeg)
 
 ## Software
