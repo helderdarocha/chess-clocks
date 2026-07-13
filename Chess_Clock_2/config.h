@@ -22,8 +22,8 @@
 #define BATT_LIPO  2   // Single internal LiOn/LiPo cell, 3.7V nominal
 
 // **** UNCOMMENT THE REQUIRED LINE ****
-#define POWER_SOURCE        BATT_LIPO   // <-- CHANGE
-//#define POWER_SOURCE        BATT_3XAA   // <-- CHANGE
+//#define POWER_SOURCE        BATT_LIPO   // <-- CHANGE
+#define POWER_SOURCE        BATT_3XAA   // <-- CHANGE
 
 // Low battery threshold, considering ~1.1V AREF and protection circuit drop
 #if POWER_SOURCE == BATT_3XAA
@@ -42,8 +42,8 @@
 #define DISPLAY_LED_BLUE  2
 
 // **** UNCOMMENT THE REQUIRED LINE ****
-#define DISPLAY_LED_COLOR      DISPLAY_LED_WHITE   // <-- CHANGE
-//#define DISPLAY_LED_COLOR      DISPLAY_LED_BLUE   // <-- CHANGE
+//#define DISPLAY_LED_COLOR      DISPLAY_LED_WHITE   // <-- CHANGE
+#define DISPLAY_LED_COLOR      DISPLAY_LED_BLUE   // <-- CHANGE
 
 // Brightness actually applied at runtime via setBrightness(); differs by LED color.
 #if DISPLAY_LED_COLOR == DISPLAY_LED_WHITE

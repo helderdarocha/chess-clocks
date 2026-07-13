@@ -148,10 +148,11 @@ static void handleRunning(bool pauseReleased, bool pauseLongFired, bool p1Now, b
 
     if (*activeTime > elapsed) {
         unsigned long remaining = *activeTime - elapsed;
-        unsigned long secs = remaining / 1000;
-        if (secs != *tracker) {
+        unsigned long tickMs = *activeHourFormat ? 500UL : 1000UL;
+        unsigned long tick = remaining / tickMs;
+        if (tick != *tracker) {
             *activeHourFormat = updateRunningDisplay(*activeDisplay, remaining, *activeHourFormat);
-            *tracker = secs;
+            *tracker = tick;
         }
     } else {
         updateDisplay(*activeDisplay, 0);
@@ -175,6 +176,7 @@ static void handleRunning(bool pauseReleased, bool pauseLongFired, bool p1Now, b
         lastDrawnSeconds1 = ULONG_MAX;
         lastDrawnSeconds2 = ULONG_MAX;
         *activeHourFormat = updateRunningDisplay(*activeDisplay, *activeTime, *activeHourFormat);
+        updateDisplay(*activeDisplay, *activeTime);
 
         player1_turn = !player1_turn;
         turn_start_time = correctedMillis();
@@ -190,6 +192,7 @@ static void handleRunning(bool pauseReleased, bool pauseLongFired, bool p1Now, b
         lastDrawnSeconds1 = ULONG_MAX;
         lastDrawnSeconds2 = ULONG_MAX;
         *activeHourFormat = updateRunningDisplay(*activeDisplay, *activeTime, *activeHourFormat);
+        updateDisplay(*activeDisplay, *activeTime);
         modeSound();
         state = PAUSED;
     }

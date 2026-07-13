@@ -34,7 +34,7 @@ static void writeMMSS(Adafruit_7segment &d, unsigned long ms) {
 
 // H:MM — digit 0 left blank (only one hour digit is available/needed up
 // to the 9:59 clamp), digit 1 holds the hour, digits 3/4 hold the minute.
-static void writeHMM(Adafruit_7segment &d, unsigned long ms) {
+static void writeHMM(Adafruit_7segment &d, unsigned long ms, bool colonOn) {
     unsigned long totalMinutes = ms / 60000UL;
     uint8_t hours   = totalMinutes / 60;
     uint8_t minutes = totalMinutes % 60;
@@ -43,7 +43,7 @@ static void writeHMM(Adafruit_7segment &d, unsigned long ms) {
     d.writeDigitNum(1, hours);
     d.writeDigitNum(3, minutes / 10);
     d.writeDigitNum(4, minutes % 10);
-    d.drawColon(true);
+    d.drawColon(colonOn);
     d.writeDisplay();
 }
 
@@ -52,7 +52,7 @@ void updateDisplay(Adafruit_7segment &d, unsigned long ms) {
         ms = MAX_DISPLAYABLE_MS;
 
     if (ms >= HOUR_FORMAT_THRESHOLD_MS) {
-        writeHMM(d, ms);
+        writeHMM(d, ms, true);
     } else {
         writeMMSS(d, ms);
     }
@@ -67,7 +67,8 @@ bool updateRunningDisplay(Adafruit_7segment &d, unsigned long ms, bool wasHourFo
                        : (ms >= HOUR_FORMAT_ENTER_MS);  // only enter H:MM once above the enter line
 
     if (hourFormat) {
-        writeHMM(d, ms);
+        bool colonOn = ((ms / 500UL) % 2UL) == 0UL;  // blink colon every half second
+        writeHMM(d, ms, colonOn);
     } else {
         writeMMSS(d, ms);
     }
