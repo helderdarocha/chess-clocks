@@ -41,10 +41,10 @@ Materials used for this project:
 - Enclosure and seesaw switch with magnets (CNC cut)
 - On/off switch
 
-Schematic for Clock 3:
+Schematic for Clock 3 (I no longer use pull-ups resistors for the buttons - I rely on the internal pull-ups of the Arduino Pro Mini):
 ![Schematic](images/schematic.png)
 
-Protoboard layout for Clock 2 (I still didn't make one for Clock 3):
+Protoboard layout for Clock 2 (A bit outdated and I still didn't draw an updated one for Clock 3):
 ![Protoboard](images/protoboard.png)
 
 ## Case design
