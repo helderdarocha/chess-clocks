@@ -1,9 +1,10 @@
 # Chess Clocks (Arduino)
 
-First model (Clock 1) using 3xAA batteries and led-powered arcade buttons in a resin-coated wooden case.
+First model (Clock 1) using 3xAA batteries, TM1637 displays, and led-powered arcade buttons 
+in a resin-coated wooden case.
 [Chess Clock 1](images/chess-clock_1.png)
 
-Old model (Clock 2) using 3xAA batteries and pull-up resistors.
+Old model (Clock 2) using 3xAA batteries, HT16K33 displays and pull-up resistors.
 ![Chess Clock 2](images/chess-clock_2.png)
 
 Current model (Clock 3) using Li-ion battery with TP4056 charger module.
@@ -23,7 +24,7 @@ Any slight movement of the seesaw switch will trigger a button press. The case w
 
 Materials used for this project:
 - Arduino Pro Mini 3V3 8MHz (Clock 3) or Arduino Nano 5V 16MHz (Clock 2)
-- 2x Adafruit 7-segment LED backpacks (I2C)
+- 2x Adafruit-compatible HT16K33 4-digit 7-segment LED displays (I2C)
 - Buzzer
 - Buttons for each player (mounted as a pair of push buttons, or microswitches / seesaw switch)
 - 3 control push buttons (start/pause/reset)
