@@ -1,17 +1,23 @@
 # Chess Clocks (Arduino)
 
+First model (Clock 1) using 3xAA batteries and led-powered arcade buttons in a resin-coated wooden case.
+[Chess Clock 1](images/chess-clock_1.png)
+
+Old model (Clock 2) using 3xAA batteries and pull-up resistors.
 ![Chess Clock 2](images/chess-clock_2.png)
+
+Current model (Clock 3) using Li-ion battery with TP4056 charger module.
 ![Chess Clock 3](images/chess-clock_3.png)
 
-20 presets for different time controls, including increment. Long pause allows adding or removing time during
+The current code in this repository, and list of material plus schematic/protoboard is for Clocks 2 and 3.
+
+All have 20 presets for different time controls, including increment. Long pause allows adding or removing time during
 a game. Sleep mode for power saving (after 5 minutes of inactivity). Optional DS3231 RTC module for
 drift correction of the Arduino's millis() timer which uses a ceramic resonator instead of a crystal.
 
-The case was CNC-cut from 2mm basswood. The seesaw switch is mounted on the top of the case and uses magnets to attract
+The cases were CNC-cut from 2mm basswood. The seesaw switch is mounted on the top of the case and uses magnets to attract
 the switch to the left or right side. Two microswitches are mounted under the seesaw switch to detect which side is pressed.
-Any slight movement of the seesaw switch will trigger a button press. The case was decorated with 0.5mm wood sheets.
-
-The old model (Clock 2) uses a 3xAA battery pack and pull-up resistors. The new model (Clock 3) uses a Li-ion battery with a TP4056 charger module.
+Any slight movement of the seesaw switch will trigger a button press. The case was decorated with 0.5 mm wood sheets.
 
 ## Hardware
 
