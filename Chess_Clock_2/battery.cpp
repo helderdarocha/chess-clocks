@@ -16,7 +16,7 @@ long readVCC_mV() {
     // ADMUX is the ADC Multiplexer Selection Register, which selects the input channel for the ADC.
     // REFS0 selects VCC as the reference voltage, and MUX3, MUX2, MUX1 select the internal 1.1V reference channel.
     ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-    delay(2);                  // let reference settle
+    delay(2);                      // let reference settle
     ADCSRA |= _BV(ADSC);           // start conversion (ADCSRA is the ADC Control and Status Register A)
     while (bit_is_set(ADCSRA, ADSC));  // wait till conversion is complete (ADSC bit is cleared when done)
     // VCC (mV) = 1100 * 1024 / ADC
@@ -61,6 +61,8 @@ void checkBatteryAtStartup(Adafruit_7segment &d1, Adafruit_7segment &d2) {
     }
 }
 
+// Call periodically (e.g. once per loop) during RUNNING/PAUSED.
+// See config.h to adjust BATT_CHECK_MS and BATT_WARN_MV.
 void checkBattery() {
     unsigned long now = millis();
     if (now - lastBattCheckMs < BATT_CHECK_MS)

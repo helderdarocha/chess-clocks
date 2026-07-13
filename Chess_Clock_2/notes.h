@@ -1,3 +1,5 @@
+// Frequencies (in Hz) for the 88 keys of a piano keyboard
+
 #define ZZ  0
 #define B0  31
 #define C1  33

@@ -23,31 +23,31 @@
 // (e.g. two switches briefly both open during a seesaw's mechanical gap).
 #define RELEASED(n,p) ((n)==HIGH && (p)==LOW)
 
+// Getters used by loop() for idle/sleep timing and to redraw after waking
+bool isRunning();
+bool isSelectingDuration();
+uint8_t getPresetIndex();
+unsigned long getPresetTimeMs();
+unsigned long getPlayer1Time();
+unsigned long getPlayer2Time();
+
 // Loads the persisted preset from EEPROM (if any), applies it, draws the
 // preset-selection screen, and enters the initial state. Call once from
 // setup(), after the displays are initialized.
-void gameInit(Adafruit_7segment &d1, Adafruit_7segment &d2);
+void clockInit(Adafruit_7segment &d1, Adafruit_7segment &d2);
 
 // Re-applies the current preset, redraws the preset-selection screen, plays
 // the mode-change sound, and returns to preset-selection. Used by the +/-
 // long-press reset combo.
-void gameResetToSelectDuration(Adafruit_7segment &d1, Adafruit_7segment &d2);
+void resetToSelectDuration(Adafruit_7segment &d1, Adafruit_7segment &d2);
 
 // Advances the game state machine by one step. Call once per loop()
 // iteration (skip the call right after waking from sleep). plusNow/minusNow/
 // p1Now/p2Now and their "prev" counterparts are the raw button reads;
 // pausePressed/pauseReleased/pauseLong/pauseLongFired are the edge/hold
 // signals computed by loop()'s own PAUSE-button timing logic.
-void gameUpdate(bool plusNow, bool prevPlus, bool minusNow, bool prevMinus,
-                bool pausePressed, bool pauseReleased,
-                bool pauseLong, bool pauseLongFired,
-                bool p1Now, bool prevP1, bool p2Now, bool prevP2,
-                Adafruit_7segment &d1, Adafruit_7segment &d2);
-
-// --- Queries used by loop() for idle/sleep timing and to redraw after waking ---
-bool gameIsRunning();
-bool gameIsSelectingDuration();
-uint8_t gameGetPresetIndex();
-unsigned long gameGetPresetTimeMs();
-unsigned long gameGetPlayer1Time();
-unsigned long gameGetPlayer2Time();
+void clockUpdate(bool plusNow, bool prevPlus, bool minusNow, bool prevMinus,
+                 bool pausePressed, bool pauseReleased,
+                 bool pauseLong, bool pauseLongFired,
+                 bool p1Now, bool prevP1, bool p2Now, bool prevP2,
+                 Adafruit_7segment &d1, Adafruit_7segment &d2);

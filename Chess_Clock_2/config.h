@@ -4,6 +4,7 @@
  *
  * These values may change between physical clock builds (battery type, LED color, wiring).
  * Edit the two "<-- CHANGE" selectors below to match the correct hardware.
+ *
  * Currently we have:
  * - Chess clock 2 - 2 AA batteries and blue display
  * - Chess clock 3 - 1 LiPo battery and white display
@@ -34,7 +35,9 @@
   #error "POWER_SOURCE not set in config.h"
 #endif
 
-#define BATT_CHECK_MS  60000UL   // check battery every 60 seconds
+// Periodic battery check interval (ms). Checked at startup and then at most once every BATT_CHECK_MS.
+#define BATT_CHECK_MS  60000UL   // 60 seconds
+
 
 /* ---------------- Display ---------------- */
 // Select the LED color used by THIS unit's displays.
@@ -54,13 +57,15 @@
   #error "DISPLAY_LED_COLOR not set in config.h"
 #endif
 
-// Used to turn off th displays
+// Used to turn off the displays
 #define DISPLAY_OFF 0
 
+// I2C addresses of the two 7-segment displays. Do not change (unless you know what you're doing).
 #define DISPLAY_ADDRESS_1 0x70
 #define DISPLAY_ADDRESS_2 0x71
 
-/* ---------------- Pins ---------------- */
+
+/* ---------------- Arduino Pins ---------------- */
 // Player levers
 #define PLY1      4
 #define PLY2      5
@@ -72,5 +77,7 @@
 
 #define BUZZER    11
 
+
 /* ---------------- Power saving ---------------- */
-#define IDLE_TIMEOUT_MS 300000UL  // 5 minutes idle (not RUNNING) before sleep
+// Determines how long the clock can be idle (not RUNNING) before going to sleep.
+#define IDLE_TIMEOUT_MS 300000UL  // 5 minutes

@@ -4,6 +4,8 @@
  * Pure rendering functions: given the values to show and the
  * display objects to show them on, these draw and nothing else.
  * They know nothing about game state, presets, or EEPROM.
+ * This implementation depends on the Adafruit_LEDBackpack library to
+ * control two HT16K33 7-segment displays via I2C.
  *
  * Created by Helder da Rocha on 11/07/26.
  * ================================================================ */

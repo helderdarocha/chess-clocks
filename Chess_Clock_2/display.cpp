@@ -1,6 +1,13 @@
 #include <Arduino.h>
 #include "display.h"
 
+// Time is displayed as MM:SS for times less than 100 minutes, and as H:MM
+// for times 100 minutes or more. The bonus is added to the player's time after each turn.
+// When displaying H:MM the colon blinks every half second to indicate that the clock is running.
+// The display is updated every second, but the time is decremented continuously in the background,
+// so the display may be slightly behind the actual time (fractions of a second).
+// The display is also updated when the user presses the + or - buttons to set the time in TIMESET mode.
+
 // Above this, MM:SS's two-digit minute field would overflow (max 99:59),
 // so we switch to H:MM. Below it, MM:SS gives full second-by-second
 // ticking feedback, which matters for realistic games — e.g. a 90:30
@@ -16,8 +23,10 @@
 
 // Largest value H:MM can show with a single hour digit (0-9); anything
 // beyond this is clamped defensively rather than drawing a garbled digit.
+// The max displayable time is 9:59, which is 9 hours and 59 minutes in milliseconds.
 #define MAX_DISPLAYABLE_MS        (9UL * 3600UL * 1000UL + 59UL * 60UL * 1000UL)  // 9:59
 
+// MM:SS — digits 0/1 hold the minute, digits 3/4 hold the second, colon is always on.
 static void writeMMSS(Adafruit_7segment &d, unsigned long ms) {
     unsigned long s = ms / 1000;
     uint8_t m = s / 60;
@@ -47,6 +56,8 @@ static void writeHMM(Adafruit_7segment &d, unsigned long ms, bool colonOn) {
     d.writeDisplay();
 }
 
+// Updates the display with the given time in milliseconds, using MM:SS or H:MM format as appropriate.
+// This is used for the PAUSED and TIMESET states, where the time is not continuously ticking down.
 void updateDisplay(Adafruit_7segment &d, unsigned long ms) {
     if (ms > MAX_DISPLAYABLE_MS)
         ms = MAX_DISPLAYABLE_MS;
@@ -58,6 +69,12 @@ void updateDisplay(Adafruit_7segment &d, unsigned long ms) {
     }
 }
 
+// Updates the display with the given time in milliseconds, using MM:SS or H:MM format as appropriate.
+// This is used for the RUNNING state, where the time is continuously ticking down.
+// The colon blinks every half second in H:MM format to indicate that the clock is running.
+// The function returns true if the display is in H:MM format, and false if it is in MM:SS format.
+// The wasHourFormat parameter is used to determine whether to stay in H:MM format or switch back to
+// MM:SS format based on the hysteresis thresholds.
 bool updateRunningDisplay(Adafruit_7segment &d, unsigned long ms, bool wasHourFormat) {
     if (ms > MAX_DISPLAYABLE_MS)
         ms = MAX_DISPLAYABLE_MS;

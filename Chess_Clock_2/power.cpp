@@ -6,6 +6,8 @@
 #include "display.h"   // showPresetSelect(), showPausedDisplays()
 
 // Tries to reduce battery use by turning off everything that is possible.
+// This code is mostly boilerplate from the Arduino forum, with some modifications to
+// work with the Adafruit 7-segment displays.
 // See https://forum.arduino.cc/t/what-to-turn-off-and-how/79151/9
 void goToSleep(Adafruit_7segment &d1, Adafruit_7segment &d2,
                bool &sleeping, bool &justWokeUp, unsigned long &lastActivityMs,

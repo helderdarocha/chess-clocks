@@ -41,6 +41,7 @@ static long correctionRemainder = 0;
 static unsigned long lastAppliedMillis = 0;
 static unsigned long correctedBase = 0;
 
+// Initializes the RTC module and detects whether a DS3231 is present on the I2C bus.
 void rtcInit() {
   available = rtc.begin();
   lastAppliedMillis = millis();
@@ -50,28 +51,44 @@ void rtcInit() {
   // time for this drift correction to work.
 }
 
+// Returns true if a DS3231 was detected at rtcInit(). Exposed for diagnostics;
+// not required for normal operation.
 bool rtcIsAvailable() {
   return available;
 }
 
+// Internal helper to start a new calibration window. Updates the
+// reference epoch and millis() values, and sets the calibrating flag.
 static void restartCalibrationWindow(uint32_t epoch, unsigned long nowMs) {
   calibStartEpoch  = epoch;
   calibStartMillis = nowMs;
   calibrating      = true;
 }
 
+// Call right after waking from sleep. millis() is frozen during
+// SLEEP_MODE_PWR_DOWN but the RTC keeps ticking independently, so the
+// in-progress calibration window is discarded and restarted from the
+// post-wake reference instead of seeing a false drift reading. The
+// existing correction rate keeps applying in the meantime. No-op if no
+// RTC was found.
 void rtcNotifyWake() {
-  if (!available) return;
+  if (!available)
+    return;
   // Discard whatever window was in progress; correctionPpm itself (the
   // last known-good rate) keeps being applied without interruption.
   calibrating = false;
 }
 
+// Call once per loop() iteration. Internally throttles its own I2C reads
+// and periodically recalibrates the drift-correction rate against the
+// RTC. Cheap to call every iteration; no-op if no RTC was found.
 void rtcUpdate() {
-  if (!available) return;
+  if (!available)
+    return;
 
   unsigned long now = millis();
-  if (now - lastPollMs < RTC_POLL_INTERVAL_MS) return;
+  if (now - lastPollMs < RTC_POLL_INTERVAL_MS)
+    return;
   lastPollMs = now;
 
   uint32_t epoch = rtc.now().unixtime();   // the only I2C read this module does
@@ -82,7 +99,8 @@ void rtcUpdate() {
   }
 
   uint32_t elapsedSec = epoch - calibStartEpoch;
-  if (elapsedSec < CALIBRATION_WINDOW_SEC) return;
+  if (elapsedSec < CALIBRATION_WINDOW_SEC)
+    return;
 
   unsigned long elapsedRawMs = now - calibStartMillis;
   unsigned long expectedMs   = elapsedSec * 1000UL;
@@ -101,6 +119,8 @@ void rtcUpdate() {
   restartCalibrationWindow(epoch, now);
 }
 
+// Returns a drift-corrected millis() value, using the RTC as a reference.
+// If no RTC was detected at startup, falls back to plain millis().
 unsigned long correctedMillis() {
   if (!available)
     return millis();

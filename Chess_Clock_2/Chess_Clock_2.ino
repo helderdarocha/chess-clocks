@@ -90,7 +90,7 @@ void setup() {
     rtcInit();
 
     // Load persisted preset, apply it, draw preset-selection screen
-    gameInit(d1, d2);
+    clockInit(d1, d2);
 
     noTone(BUZZER);
 }
@@ -145,23 +145,23 @@ void loop() {
 
     rtcUpdate();  // throttled internally; no-op if no RTC was found
 
-    if (resetLong && !gameIsRunning()) {
-        gameResetToSelectDuration(d1, d2);
+    if (resetLong && !isRunning()) {
+        resetToSelectDuration(d1, d2);
     }
 
-    if (gameIsRunning()) {
+    if (isRunning()) {
         lastRunningMs = millis();  // used to calculate idle timeout
     }
 
     // will sleep if idle for too long and not running (wakes up on any button press)
     // if the clock was running, and just changed state automatically (game over), it will wait IDLE_TIMEOUT_MS
     // before sleeping, to give the user a chance to see the result and hear the game over tune.
-    if (!sleeping && !gameIsRunning()
+    if (!sleeping && !isRunning()
                   && millis() - lastActivityMs > IDLE_TIMEOUT_MS
                   && millis() - lastRunningMs > IDLE_TIMEOUT_MS) {
         goToSleep(d1, d2, sleeping, justWokeUp, lastActivityMs,
-                  gameIsSelectingDuration(), gameGetPresetIndex(), gameGetPresetTimeMs(),
-                  gameGetPlayer1Time(), gameGetPlayer2Time());
+                  isSelectingDuration(), getPresetIndex(), getPresetTimeMs(),
+                  getPlayer1Time(), getPlayer2Time());
     }
 
     if (justWokeUp) {
@@ -176,11 +176,11 @@ void loop() {
             awaitingButtonRelease = false;
         }
     } else { 
-        gameUpdate(plusNow, prevPlus, minusNow, prevMinus,
-                   pausePressed, pauseReleased,
-                   pauseLong, pauseLongFired,
-                   p1Now, prevP1, p2Now, prevP2,
-                   d1, d2);
+        clockUpdate(plusNow, prevPlus, minusNow, prevMinus,
+                    pausePressed, pauseReleased,
+                    pauseLong, pauseLongFired,
+                    p1Now, prevP1, p2Now, prevP2,
+                    d1, d2);
     }
 
     if (pauseNow == HIGH) {

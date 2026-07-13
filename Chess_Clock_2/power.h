@@ -16,12 +16,16 @@
 #include <Arduino.h>
 #include <Adafruit_LEDBackpack.h>
 
-// sleeping, justWokeUp, and lastActivityMs are updated in place so the
+// Call this from loop() when the clock has been idle for a while. It blanks
+// both displays, puts the CPU to sleep, and wakes on any button press. After
+// waking, it restores the brightness and redraws the display.
+//
+// The variables: `sleeping`, `justWokeUp`, and `lastActivityMs` are updated in place so the
 // caller's copies stay in sync with what happened during the call.
 //
-// showingPresetSelect selects what to redraw on waking:
-// - pass true if the clock was in the preset-selection state (redraws presetIndex/presetMs),
-// - false otherwise (redraws both players' remaining time via time1/time2).
+// The variable `showingPresetSelect` selects what to redraw on waking:
+// - pass `true` if the clock was in the preset-selection state (redraws `presetIndex` / `presetMs),
+// - pass `false` otherwise (redraws both players' remaining time via `time1` / `time2`).
 void goToSleep(Adafruit_7segment &d1, Adafruit_7segment &d2,
                bool &sleeping, bool &justWokeUp, unsigned long &lastActivityMs,
                bool showingPresetSelect,
