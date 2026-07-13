@@ -2,7 +2,7 @@
 
 First model (Clock 1) using 3xAA batteries, TM1637 displays, and led-powered arcade buttons 
 in a resin-coated wooden case.
-[Chess Clock 1](images/chess-clock_1.png)
+![Chess Clock 1](images/chess-clock_1.png)
 
 Old model (Clock 2) using 3xAA batteries, HT16K33 displays and pull-up resistors.
 ![Chess Clock 2](images/chess-clock_2.png)
