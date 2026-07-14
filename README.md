@@ -87,3 +87,58 @@ for the correct hardware configuration (battery, display, pins):
 - `power.h / power.cpp` - sleep mode for power saving
 - `game.h / game.cpp` - game state machine and button handling, presets, seesaw switch macros
 - `rtc.h / rtc.cpp` - optional DS3231: corrects millis() drift, no config needed
+
+## User Guide
+### Selecting the game duration
+When powered on, the clock starts in game duration mode. To confirm the current duration, press ⏸️ / ▶️. This will put the clock into paused mode. Press ⏸️ / ▶️ again to start the countdown on the active display (the side of the raised lever).
+
+To select a different duration, use ➕ to move forward or ➖ to go back. There are 20 preset game time options. The first display shows the option number and the second display shows the time in minutes + bonus in seconds:
+
+- Bullet (00-03): 1+0, 1+1, 2+0, 2+1
+- Blitz (04-07): 3+0, 3+2, 5+0, 5+3
+- Rapid (08-13): 10+0, 10+5, 15+0, 15+10, 30+0, 30+15
+- Classic (14-19): 45+0, 45+30, 60+0, 60+30, 90+0, 90+30
+
+The clock remembers the last option selected, even after being turned off.
+
+### To get started
+
+Turn on the clock (power button). The displays show the last game duration used.
+
+Position the lever so the starting player can press it when the game begins, and press ⏸️ / ▶️ to start the countdown with the current duration.
+
+The clock enters game mode.
+
+Each press of the lever adds a bonus in seconds (if the selected duration has a bonus set) before stopping the corresponding clock.
+
+### Time adjustment
+To adjust time during a game (to apply penalties):
+
+1. Pause the game with ⏸️ / ▶️. The clock enters paused mode.
+2. Press and hold ⏸️ / ▶️ for 2 seconds. The clock enters time adjustment mode. Only the first display will be lit.
+3. If the first display's time is not to be changed, press ⏸️ / ▶️ to skip to the second display.
+4. Adjust the time on the active display using the ➕ (adds 1 minute) and ➖ (removes 1 minute) buttons. To confirm, press ⏸️ / ▶️.
+5. Pressing ⏸️ / ▶️ while the first display is lit selects the second display (turns off the first, turns on the second). Pressing this key again returns to paused mode.
+6. To exit paused mode, press ⏸️ / ▶️ again to restart the countdown.
+
+The clock displays time in MM:SS format up to 99:59. Larger values are shown in H:MM format (e.g., 1:40), with the ":" of the active clock blinking every half second. The clock returns to MM:SS format once the H:MM countdown drops below 1:38. The maximum supported time is 9:59:59.
+
+### End of game
+When a player's time reaches zero, game mode ends:
+
+1. The clocks stop counting (finished mode)
+2. A tune is played
+
+To start a new game after time has run out, press ⏸️ / ▶️.
+
+### Restart
+To restart at any time, turn the clock off and back on (power button) or, while paused or finished, press the ➕ and ➖ buttons simultaneously. The clock restarts (in game duration mode) with the last duration used.
+
+### Operation and power
+On startup, if the batteries need to be replaced, the displays will flash the message BAtt Lo-- twice along with three soft beeps, before displaying the game duration. The sounds will repeat every minute while the clock is on.
+
+The clock will enter low-power mode and turn off the displays if it is not in game mode (counting time) and remains untouched — with no button or lever pressed — for more than 5 minutes. Pressing any button or lever will wake the clock.
+
+In low-power mode, consumption is very low but not zero. After using the clock, turn it off.
+
+To charge the battery, connect a USB-A to USB-C cable to the back of the clock. When charging is complete, the indicator LED will turn blue. USB-C to USB-C cables do not work on older clocks.
