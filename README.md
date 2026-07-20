@@ -30,10 +30,9 @@ Materials used for this project:
 - 3 control push buttons (start/pause/reset)
 - 1 pull-up resistor for battery circuit (10k)
 - Power supply (Clock 3: 3,7V Li-ion battery or Clock 2: 3x AA batteries)
-- 2200uF capacitor for power stabilization
-- 2 100uF capacitor to reduce flicker on LED displays
-- 2 100nF capacitor for noise reduction on LED displays
-- Schottky diode for reverse polarity protection (Clock 2: for 3xAA battery pack)
+- 3 100µF capacitors (to filter noise)
+- 3 100nF capacitors (to filter noise)
+- Schottky diode for reverse polarity protection
 - BC548 transistor (Clock 3: for Li-ion battery circuit)
 - 2N7000 MOSFET (Clock 3: for Li-ion battery circuit)
 - TP4056 Li-ion battery charger module (Clock 3: for Li-ion battery circuit)
