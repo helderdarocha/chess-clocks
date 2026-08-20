@@ -18,6 +18,13 @@ void goToSleep(Adafruit_7segment &d1, Adafruit_7segment &d2,
   // Blank both displays
   d1.setBrightness(DISPLAY_OFF); d1.clear(); d1.writeDisplay();
   d2.setBrightness(DISPLAY_OFF); d2.clear(); d2.writeDisplay();
+
+  // Also turn off the PAUSE LED. loop() normally drives this LED from
+  // isPaused(), but loop() is about to block at sleep_cpu() until a
+  // button wakes it, so that logic won't run again until after wake —
+  // it has to be turned off here instead, even if we were PAUSED.
+  digitalWrite(LED_PAUSE, LOW);
+
   sleeping = true;
 
   // Enable pin-change interrupts on all five buttons so any one wakes the CPU.

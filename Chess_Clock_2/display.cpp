@@ -129,3 +129,80 @@ void showTimeSetDisplay(uint8_t stage,
         clearDisplay(d1);
     }
 }
+
+// Raw segment codes for letters not in the display library's built-in
+// digit font (bit0=a, bit1=b, bit2=c, bit3=d, bit4=e, bit5=f, bit6=g).
+#define SEG_S 0x6D  // looks like digit 5, same shape
+#define SEG_n 0x54
+#define SEG_d 0x5E
+#define SEG_F 0x71
+
+void showSoundStatus(bool enabled, Adafruit_7segment &d1, Adafruit_7segment &d2) {
+    // d1: "Snd" (right-aligned, digit 0 left blank)
+    d1.clear();
+    d1.writeDigitRaw(1, SEG_S);
+    d1.writeDigitRaw(3, SEG_n);
+    d1.writeDigitRaw(4, SEG_d);
+    d1.drawColon(false);
+    d1.writeDisplay();
+
+    // d2: "0n" or "0ff"
+    d2.clear();
+    if (enabled) {
+        d2.writeDigitNum(3, 0);
+        d2.writeDigitRaw(4, SEG_n);
+    } else {
+        d2.writeDigitNum(0, 0);
+        d2.writeDigitRaw(1, SEG_F);
+        d2.writeDigitRaw(3, SEG_F);
+    }
+    d2.drawColon(false);
+    d2.writeDisplay();
+}
+
+// Below this, total game time is shown as MM:SS; at or above it, H:MM.
+// Deliberately a lower cutover than HOUR_FORMAT_THRESHOLD_MS above: total
+// game time is a running sum across the whole game, not a single player's
+// remaining clock, so it's worth switching to H:MM as soon as it passes
+// the one-hour mark rather than waiting for 100 minutes.
+#define GAME_STATS_HOUR_THRESHOLD_MS  (60UL * 60UL * 1000UL)   // 1:00:00
+
+// Writes a move number right-justified across all four digit positions
+// (0, 1, 3, 4 — position 2 is the colon), blanking unused leading digits
+// rather than showing leading zeros, and always drawing the units digit
+// with its decimal point lit (e.g. "40.", or just ".5" -> "5." for
+// single-digit counts) to read like standard chess move notation.
+static void writeMoveCount(Adafruit_7segment &d, unsigned long count) {
+    if (count > 9999UL)
+        count = 9999UL;   // clamp defensively; display only has 4 digits
+
+    uint8_t thousands = (count / 1000UL) % 10;
+    uint8_t hundreds  = (count / 100UL)  % 10;
+    uint8_t tens      = (count / 10UL)   % 10;
+    uint8_t ones      = count % 10UL;
+
+    d.clear();
+    bool started = false;
+    if (thousands > 0)            { d.writeDigitNum(0, thousands); started = true; }
+    if (started || hundreds > 0)  { d.writeDigitNum(1, hundreds);  started = true; }
+    if (started || tens > 0)      { d.writeDigitNum(3, tens); }
+    d.writeDigitNum(4, ones, true);   // units digit, decimal point always on
+    d.drawColon(false);
+    d.writeDisplay();
+}
+
+// 
+void showGameStats(unsigned long totalPlayTimeMs, unsigned long moveCount,
+                   Adafruit_7segment &d1, Adafruit_7segment &d2) {
+    if (totalPlayTimeMs > MAX_DISPLAYABLE_MS)
+        totalPlayTimeMs = MAX_DISPLAYABLE_MS;
+
+    if (totalPlayTimeMs >= GAME_STATS_HOUR_THRESHOLD_MS) {
+        writeHMM(d1, totalPlayTimeMs, true);
+    } else {
+        writeMMSS(d1, totalPlayTimeMs);
+    }
+
+    writeMoveCount(d2, moveCount);
+}
+

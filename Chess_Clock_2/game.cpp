@@ -67,6 +67,21 @@ static bool includeBonusInFirstTurn = true; // if false, 10:05 will start at 10:
 // follows leaving TIMESET, so it isn't also treated as "resume game".
 static bool ignorePauseRelease = false;
 
+/* ================= Move counting / total playing time ================= */
+// "White" is whichever player is active the first time this game enters
+// RUNNING (not re-determined on every pause/resume, so it stays fixed even
+// if the seesaw position is nudged while paused). A "move" is counted each
+// time White's own turn ends — i.e. when White presses their lever, mirroring
+// standard chess notation where a move number appears once White has played
+// (Black's reply is still part of that same numbered move).
+static bool startingPlayerIsPlayer1 = true;
+static bool gameStarted = false;            // true once this game has entered RUNNING at least once
+static unsigned long moveCount = 0;
+static unsigned long totalPlayTimeMs = 0;   // sum of RUNNING time only; paused time is never added
+
+// millis() timestamp when SHOW_MOVE_INFO was entered, used for its 5s auto-timeout.
+static unsigned long moveInfoEnteredMs = 0;
+
 /* ================= Finite-state machine ================= */
 // The game has five states: SELECT_DURATION, PAUSED, RUNNING, TIMESET, and GAME_OVER.
 // The state machine transitions between these states based on user input (button presses)
@@ -78,7 +93,8 @@ enum ClockState {
     PAUSED,             // The game is paused, and the user can press PAUSE to resume, or long-press PAUSE to enter TIMESET.
     RUNNING,            // The game is running, and the user can press PAUSE to pause, or tap the seesaw switch to end their turn.
     TIMESET,            // The user can set the time for each player with the + and - buttons, then press PAUSE to return to PAUSED.
-    GAME_OVER           // One player's time has run out, and the user can press PAUSE to reset to PAUSED.
+    GAME_OVER,          // One player's time has run out, and the user can press PAUSE to reset to PAUSED.
+    SHOW_MOVE_INFO      // Briefly shows total game time + move count; reached from PAUSED via "-", returns to PAUSED after 5s or another "-" tap.
 };
 
 static ClockState state;
@@ -105,6 +121,12 @@ static void applyPreset() {
 
     hourFormat1 = false;
     hourFormat2 = false;
+
+    // A fresh preset means a fresh game: reset move/time tracking. Who
+    // "White" is gets (re-)determined the next time RUNNING is entered.
+    gameStarted = false;
+    moveCount = 0;
+    totalPlayTimeMs = 0;
 }
 
 /* ================= State handlers - called from clockUpdate() ================= */
@@ -137,12 +159,42 @@ static void handleSelectDuration(bool plusNow, bool minusNow, bool prevPlus, boo
 }
 
 // PAUSED
-static void handlePaused(bool pauseReleased, bool pauseLong, Adafruit_7segment &d1, Adafruit_7segment &d2) {
+static void handlePaused(bool pauseReleased, bool pauseLong, bool plusLong, bool minusLong,
+                         bool minusReleased, bool minusLongFired,
+                         Adafruit_7segment &d1, Adafruit_7segment &d2) {
     checkBattery();                         // Check battery voltage and play low-battery warning if needed
     if (ignorePauseRelease) {               // Ignore the PAUSE release that follows leaving TIMESET, so it isn't also treated as "resume game".
         if (pauseReleased) {
             ignorePauseRelease = false;
         }
+        return;
+    }
+    // A short "-" tap (released before the 3s hold-to-mute threshold fires)
+    // opens the move-info screen: total game time + current move number.
+    // Checked before the minusLong hold-toggle below so the two can't both
+    // act on the same press (minusLongFired stays true through this frame
+    // if the hold already fired the mute action).
+    if (minusReleased && !minusLongFired) {
+        moveInfoEnteredMs = millis();
+        showGameStats(totalPlayTimeMs, moveCount, d1, d2);
+        state = SHOW_MOVE_INFO;
+        return;
+    }
+    // Holding + or - for 3s toggles sound on/off, showing "Snd 0n"/"Snd 0ff"
+    // for 2 seconds before returning to the normal paused display.
+    if (plusLong) {
+        setSoundEnabled(true);
+        showSoundStatus(true, d1, d2);
+        soundOnBeep();
+        delay(2000);
+        showPausedDisplays(d1, player1_time, d2, player2_time);
+        return;
+    }
+    if (minusLong) {
+        setSoundEnabled(false);
+        showSoundStatus(false, d1, d2);
+        delay(2000);
+        showPausedDisplays(d1, player1_time, d2, player2_time);
         return;
     }
     if (pauseLong) {
@@ -153,8 +205,25 @@ static void handlePaused(bool pauseReleased, bool pauseLong, Adafruit_7segment &
     } else if (pauseReleased) {
         player1_turn = isPlayer1Turn();
         turn_start_time = correctedMillis();
+        // The first time this game ever enters RUNNING, lock in whichever
+        // player is active as "White" for move-counting purposes. Later
+        // pause/resume cycles within the same game leave this alone.
+        if (!gameStarted) {
+            startingPlayerIsPlayer1 = player1_turn;
+            gameStarted = true;
+        }
         startSound();
         state = RUNNING;
+    }
+}
+
+// SHOW_MOVE_INFO
+// Briefly shows total game time + move count (see handlePaused()). Exits
+// back to PAUSED either on another "-" tap or automatically after 5s.
+static void handleShowMoveInfo(bool minusReleased, Adafruit_7segment &d1, Adafruit_7segment &d2) {
+    if (minusReleased || millis() - moveInfoEnteredMs >= 5000UL) {
+        showPausedDisplays(d1, player1_time, d2, player2_time);
+        state = PAUSED;
     }
 }
 
@@ -184,6 +253,11 @@ static void handleRunning(bool pauseReleased, bool pauseLongFired, bool p1Now, b
         }
     } else {    // Time has run out for the active player
         updateDisplay(*activeDisplay, 0);
+        // Credit whatever time the active player had left: all of it was
+        // spent (ticked down to zero) before the game ended, even though
+        // they never pressed their lever to complete this final turn — so
+        // it counts toward total playing time but not toward moveCount.
+        totalPlayTimeMs += *activeTime;
         gameOverPlayed = false;
         state = GAME_OVER;
         return;
@@ -203,6 +277,10 @@ static void handleRunning(bool pauseReleased, bool pauseLongFired, bool p1Now, b
     if (turnEnded && elapsed > 60) {    // Only end turn if >60ms have elapsed (protect against switch bounce)
         *activeTime = (*activeTime > elapsed) ? *activeTime - elapsed : 0;  // Deduct elapsed from active player's remaining time, but don't go below 0
         *activeTime += bonus_time;  // Add the bonus time to active player's remaining time
+        totalPlayTimeMs += elapsed;   // this turn's active time counts toward total playing time
+        if (player1_turn == startingPlayerIsPlayer1) {
+            moveCount++;   // White's turn just ended: that's one more completed move
+        }
         lastDrawnSeconds1 = ULONG_MAX;
         lastDrawnSeconds2 = ULONG_MAX;
         *activeHourFormat = updateRunningDisplay(*activeDisplay, *activeTime, *activeHourFormat);  // Update the active player's display with the new remaining time and format
@@ -221,6 +299,7 @@ static void handleRunning(bool pauseReleased, bool pauseLongFired, bool p1Now, b
     // If the user presses PAUSE while the game is running, we pause the game and return to the PAUSED state.
     if (pauseReleased && !pauseLongFired) {
         *activeTime = (*activeTime > elapsed) ? *activeTime - elapsed : 0;
+        totalPlayTimeMs += elapsed;   // time spent on this (incomplete) turn still counts; pausing itself doesn't
         lastDrawnSeconds1 = ULONG_MAX;
         lastDrawnSeconds2 = ULONG_MAX;
         *activeHourFormat = updateRunningDisplay(*activeDisplay, *activeTime, *activeHourFormat);
@@ -281,11 +360,15 @@ static void handleGameOver(bool pauseReleased, Adafruit_7segment &d1, Adafruit_7
 // Getters
 bool isRunning()           { return state == RUNNING; }
 bool isSelectingDuration() { return state == SELECT_DURATION; }
+bool isPaused()            { return state == PAUSED; }
+bool isShowingMoveInfo()   { return state == SHOW_MOVE_INFO; }
 
 uint8_t getPresetIndex()   { return preset_index; }
 unsigned long getPresetTimeMs() { return presetTimeMs(preset_index); }
 unsigned long getPlayer1Time()  { return player1_time; }
 unsigned long getPlayer2Time()  { return player2_time; }
+unsigned long getMoveCount()       { return moveCount; }
+unsigned long getTotalPlayTimeMs() { return totalPlayTimeMs; }
 
 // Called from setup() to initialize the game state machine and display the preset selection screen.
 void clockInit(Adafruit_7segment &d1, Adafruit_7segment &d2) {
@@ -312,6 +395,8 @@ void resetToSelectDuration(Adafruit_7segment &d1, Adafruit_7segment &d2) {
 void clockUpdate(bool plusNow, bool prevPlus, bool minusNow, bool prevMinus, // state of + and - buttons
                  bool pausePressed, bool pauseReleased,                      // state of PAUSE button
                  bool pauseLong, bool pauseLongFired,
+                 bool plusLong, bool minusLong,                              // 3s-hold signals for + and - (acted on only while PAUSED)
+                 bool minusReleased, bool minusLongFired,                    // release edge / persistent hold-fired flag for "-"
                  bool p1Now, bool prevP1, bool p2Now, bool prevP2,           // state of seesaw switches
                  Adafruit_7segment &d1, Adafruit_7segment &d2) {             // displays for player 1 and player 2
 
@@ -320,7 +405,7 @@ void clockUpdate(bool plusNow, bool prevPlus, bool minusNow, bool prevMinus, // 
         handleSelectDuration(plusNow, minusNow, prevPlus, prevMinus, pauseReleased, d1, d2);
         break;
       case PAUSED:
-        handlePaused(pauseReleased, pauseLong, d1, d2);
+        handlePaused(pauseReleased, pauseLong, plusLong, minusLong, minusReleased, minusLongFired, d1, d2);
         break;
       case RUNNING:
         handleRunning(pauseReleased, pauseLongFired, p1Now, p2Now, prevP1, prevP2, d1, d2);
@@ -330,6 +415,9 @@ void clockUpdate(bool plusNow, bool prevPlus, bool minusNow, bool prevMinus, // 
         break;
       case GAME_OVER:
         handleGameOver(pauseReleased, d1, d2);
+        break;
+      case SHOW_MOVE_INFO:
+        handleShowMoveInfo(minusReleased, d1, d2);
         break;
     }
 }

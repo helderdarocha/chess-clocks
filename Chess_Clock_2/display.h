@@ -48,3 +48,22 @@ void showPausedDisplays(Adafruit_7segment &d1, unsigned long time1,
 void showTimeSetDisplay(uint8_t stage,
                         Adafruit_7segment &d1, unsigned long time1,
                         Adafruit_7segment &d2, unsigned long time2);
+
+// Shows "5nd" on d1 and "0n"/"0ff" on d2 to report whether sound is
+// currently enabled. Used when the user holds + or - for 3s while PAUSED.
+// Purely draws once; the caller is responsible for how long it stays up
+// and for redrawing whatever was on screen before.
+void showSoundStatus(bool enabled, Adafruit_7segment &d1, Adafruit_7segment &d2);
+
+// Shows game statistics on d1/d2: total playing time so far (not counting
+// paused time) and the current move number. Used when the user taps "-"
+// while PAUSED. d1 shows the total time as H:MM once it reaches one hour,
+// MM:SS below that (a lower threshold than updateDisplay()'s 100-minute
+// cutover, since total game time is usually much shorter than a single
+// player's remaining clock). d2 shows the move number right-justified,
+// with a trailing decimal point on the last digit (chess-notation style,
+// e.g. "40."), blanking unused leading digits. Purely draws once; the
+// caller is responsible for how long it stays up and for redrawing
+// whatever was on screen before.
+void showGameStats(unsigned long totalPlayTimeMs, unsigned long moveCount,
+                   Adafruit_7segment &d1, Adafruit_7segment &d2);

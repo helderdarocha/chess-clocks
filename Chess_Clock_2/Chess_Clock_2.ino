@@ -1,5 +1,5 @@
-/* Chess Clock 2 - For Clock model 3
- * Version 2.0.5
+/* Chess Clock 2 - For Clock models CMX-2 and CMX-3
+ * Version 2.1.0 (added move count and total time stats - 2026-08-19)
  * @author Helder da Rocha
  */
 
@@ -51,6 +51,12 @@ bool pauseLongFired = false;
 unsigned long resetPressTime = 0;
 bool resetLongFired = false;
 
+// To toggle sound on/off using + and - buttons (held 3s while PAUSED)
+unsigned long plusPressTime = 0;
+bool plusLongFired = false;
+unsigned long minusPressTime = 0;
+bool minusLongFired = false;
+
 //////////////////// FUNCTIONS ////////////////////////////
 
 // Battery reading/warning functions live in battery.h/battery.cpp
@@ -68,6 +74,10 @@ void setup() {
     pinMode(PLY1, INPUT_PULLUP);
     pinMode(PLY2, INPUT_PULLUP);
 
+    // Pause LED
+    pinMode(LED_PAUSE, OUTPUT);
+    digitalWrite(LED_PAUSE, LOW);
+
     // Control buttons
     pinMode(PAUSE_BTN, INPUT_PULLUP);
     pinMode(PLUS_BTN, INPUT_PULLUP);
@@ -83,8 +93,11 @@ void setup() {
     d1.setBrightness(DISPLAY_ON);
     d2.setBrightness(DISPLAY_ON);
 
-    // Warn if battery is low!
+    // Warn if battery is low - beep even if sound is off!
     checkBatteryAtStartup(d1, d2);
+
+    // Load saved sound on/off preference after alerting about battery, so the user can hear the warning even if sound was off last time.
+    soundInit();
 
     // Detect an optional DS3231; falls back to plain millis() if absent
     rtcInit();
@@ -135,6 +148,35 @@ void loop() {
         resetLongFired = true;
     }
 
+    // + or - held alone (not the reset combo) for 3s while PAUSED toggles sound on/off.
+    // Tracked unconditionally here, like the other button timers; game.cpp only acts
+    // on these while in the PAUSED state.
+    if (PRESSED(plusNow, prevPlus)) {
+        plusPressTime = millis();
+        plusLongFired = false;
+    }
+        bool plusLong = false;
+        if (plusNow == LOW && !plusLongFired && millis() - plusPressTime >= 3000) {
+        plusLong = true;
+        plusLongFired = true;
+    }
+
+        if (PRESSED(minusNow, prevMinus)) {
+        minusPressTime = millis();
+        minusLongFired = false;
+    }
+        bool minusLong = false;
+        if (minusNow == LOW && !minusLongFired && millis() - minusPressTime >= 3000) {
+        minusLong = true;
+        minusLongFired = true;
+    }
+
+    // Release edge for "-", used while PAUSED to open the move-info screen
+    // (short tap) without conflicting with the 3s hold-to-mute above (see
+    // minusLongFired passed alongside it into clockUpdate()).
+    bool minusReleased = (minusNow == HIGH && prevMinus == LOW);
+
+
     // A button was pressed to wake up the clock after sleep mode (pause, plus/minus or player levers)
     if (pausePressed || PRESSED(plusNow, prevPlus)
                      || PRESSED(minusNow, prevMinus)
@@ -179,12 +221,27 @@ void loop() {
         clockUpdate(plusNow, prevPlus, minusNow, prevMinus,
                     pausePressed, pauseReleased,
                     pauseLong, pauseLongFired,
+                    plusLong, minusLong,
+                    minusReleased, minusLongFired,
                     p1Now, prevP1, p2Now, prevP2,
                     d1, d2);
     }
 
+    // PAUSE LED: on while PAUSED or showing the move-info screen (which is
+    // just a brief detour off PAUSED, not a real gameplay state), off in
+    // every other state and while sleeping (goToSleep() also turns it off
+    // before it blocks, since this line won't run again until after the
+    // clock wakes).
+    digitalWrite(LED_PAUSE, ((isPaused() || isShowingMoveInfo()) && !sleeping) ? HIGH : LOW);
+
     if (pauseNow == HIGH) {
         pauseLongFired = false;
+    }
+    if (plusNow == HIGH) {
+        plusLongFired = false;
+    }
+    if (minusNow == HIGH) {
+        minusLongFired = false;
     }
 
     prevPause = pauseNow;
