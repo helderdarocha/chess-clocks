@@ -2,7 +2,9 @@
 <project version="4">
   <component name="ArduinoSettingsState">
     <option name="arduinoCliPath" value="/opt/homebrew/bin/arduino-cli" />
+    <option name="comPort" value="cu.debug-console" />
     <option name="boardTarget" value="nano" />
+    <option name="serialPort" value="cu.debug-console" />
     <option name="activeBackend" value="arduino-cli" />
     <option name="platformioPath" value="/opt/homebrew/bin/platformio " />
   </component>

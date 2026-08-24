@@ -16,7 +16,7 @@ All have 20 presets for different time controls, including increment. Long pause
 a game. Sleep mode for power saving (after 5 minutes of inactivity). Optional DS3231 RTC module for
 drift correction of the Arduino's millis() timer which uses a ceramic resonator instead of a crystal.
 
-The cases were CNC-cut from 2mm basswood. The seesaw switch is mounted on the top of the case and uses magnets to attract
+The cases were CNC-cut from 2mm basswood (the case for a second model-3 clock was also cut from transparent 2mm acrylic). The seesaw switch is mounted on the top of the case and uses magnets to attract
 the switch to the left or right side. Two microswitches are mounted under the seesaw switch to detect which side is pressed.
 Any slight movement of the seesaw switch will trigger a button press. The case was decorated with 0.5 mm wood sheets.
 
@@ -68,6 +68,8 @@ Circuit in the (new) case during programming (Clock 3). Four rubber feet glued t
 the lower cover. It still takes a long time to assemble, but it is easier to repair than the old model.
 Programming requires an FTDI adapter, since it uses a Pro Mini. There are still too many wires (I need to design a PCB).
 ![Clock 2](images/open_clock_3.jpeg)
+
+A robust 3D printed case, a PCB, a RISC-V microcontroller or a Seeduino XIAO are some ideas for the next projects.
 
 ## Software
 
@@ -141,3 +143,15 @@ The clock will enter low-power mode and turn off the displays if it is not in ga
 In low-power mode, consumption is very low but not zero. After using the clock, turn it off.
 
 To charge the battery, connect a USB-A to USB-C cable to the back of the clock. When charging is complete, the indicator LED will turn blue. USB-C to USB-C cables do not work on older clocks.
+
+### Other features
+These features were added recently:
+- Turn sound off pressing the ➖ button for 3 seconds, or turn sounds on pressing ➕ for 3 seconds, when paused.
+  Turning off sound does not turn off the Low Battery beep at startup.
+- View how many moves were played and total time by pressing ➖ when paused. 
+
+### Experimental features (not yet committed in the main branch)
+- Add new user-defined presets and adjust different hours, minutes, seconds, and bonus seconds by adding / subtracting to individual digits
+- Save last time values and stats (total time, moves) in EEPROM
+- Adjust LED brightness
+- Inform % of battery remaining
