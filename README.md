@@ -69,7 +69,12 @@ the lower cover. It still takes a long time to assemble, but it is easier to rep
 Programming requires an FTDI adapter, since it uses a Pro Mini. There are still too many wires (I need to design a PCB).
 ![Clock 2](images/open_clock_3.jpeg)
 
-A robust 3D printed case, a PCB, a RISC-V microcontroller or a Seeduino XIAO are some ideas for the next projects.
+Some ideas for the next projects include:
+* A robust 3D printed case (will be cheaper, less fragile, lighter and faster to assemble)
+* Use a PCB for most of the circuit (less wires, safer, more robust, lighter, cheaper, faster to build)
+* Replace the Arduino with a RISC-V microcontroller or a Seeduino XIAO (cost, precision, efficiency)
+* A clock with big displays and detachable arcade buttons modules for giant chess boards
+* A clock with 4 displays and 4 detachable player modules
 
 ## Software
 
