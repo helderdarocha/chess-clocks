@@ -3,12 +3,14 @@
  * Created by Helder da Rocha on 11/07/26.
  *
  * These values may change between physical clock builds (battery type, LED color, wiring).
- * Edit the two "<-- CHANGE" selectors below to match the correct hardware.
+ * Set MODEL below to match the physical unit — everything else in this file
+ * is derived from it automatically.
  *
  * Currently we have:
  * - Chess clock CMX-1 - Not supported
  * - Chess clock CMX-2 - 2 AA batteries and blue display + Arduino Nano
- * - Chess clock CMX-3 - 1 LiPo battery and white or yellow display + Arduino Pro Mini
+ * - Chess clock CMX-3W - 1 LiPo battery and white display + Arduino Pro Mini
+ * - Chess clock CMX-3Y - 1 LiPo battery and yellow display + Arduino Pro Mini
  * ================================================================ */
 
 //#ifndef CHESS_CLOCKS_ARDUINO_CONFIG_H
@@ -18,14 +20,35 @@
 
 #include <Arduino.h>
 
+/* ----- CHOOSE THE CLOCK MODEL! -----
+ * This is the only line you should need to change. Power source (and its
+ * low-battery threshold) and display LED color/brightness are all derived
+ * automatically from the model below — see the "Derived from MODEL" blocks
+ * further down. Don't set POWER_SOURCE or DISPLAY_LED_COLOR directly.
+ */
+#define CMX_1   1   // Not supported
+#define CMX_2   2   // 3x AA batteries, blue display, Arduino Nano
+#define CMX_3W  3   // LiPo battery, white display, Arduino Pro Mini
+#define CMX_3Y  4   // LiPo battery, yellow display, Arduino Pro Mini
+
+// **** UNCOMMENT THE REQUIRED LINE ****
+//#define MODEL CMX_1
+//#define MODEL CMX_2
+//#define MODEL CMX_3W
+#define MODEL CMX_3Y
+
 /* ---------------- Power source ---------------- */
-// Select the power source used by THIS physical unit.
 #define BATT_3XAA  1   // 3x AA (Alkaline ~4.5V or NiMH ~3.6V full charge)
 #define BATT_LIPO  2   // Single internal LiOn/LiPo cell, 3.7V nominal
 
-// **** UNCOMMENT THE REQUIRED LINE ****
-//#define POWER_SOURCE        BATT_LIPO   // <-- CHANGE
-#define POWER_SOURCE        BATT_3XAA   // <-- CHANGE
+// Derived from MODEL above — do not edit these two lines directly.
+#if MODEL == CMX_2
+  #define POWER_SOURCE  BATT_3XAA
+#elif MODEL == CMX_3W || MODEL == CMX_3Y
+  #define POWER_SOURCE  BATT_LIPO
+#else
+  #error "Unsupported or unset MODEL in config.h (CMX_1 is not supported; pick CMX_2, CMX_3W, or CMX_3Y)"
+#endif
 
 // Low battery threshold, considering ~1.1V AREF and protection circuit drop
 #if POWER_SOURCE == BATT_3XAA
@@ -46,11 +69,16 @@
 #define DISPLAY_LED_YELLOW 3
 #define DISPLAY_LED_FULL   0
 
-// **** UNCOMMENT THE REQUIRED LINE ****
-//#define DISPLAY_LED_COLOR      DISPLAY_LED_YELLOW   // <-- CHANGE
-//#define DISPLAY_LED_COLOR      DISPLAY_LED_WHITE   // <-- CHANGE
-#define DISPLAY_LED_COLOR      DISPLAY_LED_BLUE   // <-- CHANGE
-//#define DISPLAY_LED_COLOR      DISPLAY_LED_FULL   // <-- CHANGE
+// **** DEPENDS on MODEL — derived below, do not edit directly ****
+#if MODEL == CMX_2
+  #define DISPLAY_LED_COLOR  DISPLAY_LED_BLUE
+#elif MODEL == CMX_3W
+  #define DISPLAY_LED_COLOR  DISPLAY_LED_WHITE
+#elif MODEL == CMX_3Y
+  #define DISPLAY_LED_COLOR  DISPLAY_LED_YELLOW
+#else
+  #error "Unsupported or unset MODEL in config.h (CMX_1 is not supported; pick CMX_2, CMX_3W, or CMX_3Y)"
+#endif
 
 // Brightness actually applied at runtime via setBrightness(); differs by LED color.
 #if DISPLAY_LED_COLOR == DISPLAY_LED_WHITE

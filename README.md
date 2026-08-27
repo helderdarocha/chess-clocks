@@ -150,13 +150,15 @@ In low-power mode, consumption is very low but not zero. After using the clock, 
 To charge the battery, connect a USB-A to USB-C cable to the back of the clock. When charging is complete, the indicator LED will turn blue. USB-C to USB-C cables do not work on older clocks.
 
 ### Other features
-These features were added recently:
+These features were added recently and not yet documented:
 - Turn sound off pressing the ➖ button for 3 seconds, or turn sounds on pressing ➕ for 3 seconds, when paused.
   Turning off sound does not turn off the Low Battery beep at startup.
 - View how many moves were played and total time by pressing ➖ when paused. 
+- A user-defined timeset/bonus preset can be added by long pausing in the initial preset screen. It will be added
+at position 20. You can adjust 0-9 hours, 0-59 minutes, and 0-59 bonus seconds by adding / subtracting to individual digits.
+A new user-defined preset overrides it.
+
 
 ### Experimental features (not yet committed in the main branch)
-- Add new user-defined presets and adjust different hours, minutes, seconds, and bonus seconds by adding / subtracting to individual digits
-- Save last time values and stats (total time, moves) in EEPROM
 - Adjust LED brightness
 - Inform % of battery remaining

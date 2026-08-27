@@ -18,6 +18,14 @@
 #include <Arduino.h>
 #include <Adafruit_LEDBackpack.h>
 
+// Field indices for showPresetEditDisplay(), identifying which of the five
+// digits of a custom preset is currently being edited.
+#define PRESET_EDIT_HOURS      0
+#define PRESET_EDIT_MIN_TENS   1
+#define PRESET_EDIT_MIN_ONES   2
+#define PRESET_EDIT_BONUS_TENS 3
+#define PRESET_EDIT_BONUS_ONES 4
+
 // Renders remaining time onto one display. Automatically switches between
 // MM:SS (below 100 minutes) and H:MM (100 minutes and up: one hour digit,
 // two-digit minutes, seconds dropped) using a single hard threshold with
@@ -54,6 +62,19 @@ void showTimeSetDisplay(uint8_t stage,
 // Purely draws once; the caller is responsible for how long it stays up
 // and for redrawing whatever was on screen before.
 void showSoundStatus(bool enabled, Adafruit_7segment &d1, Adafruit_7segment &d2);
+
+// Shows the in-progress custom preset being built by the digit-by-digit
+// editor (see PRESET_EDIT state in game.cpp): hours/minutes as H:MM on d1,
+// bonus seconds in the last two digits of d2 (no colon, mirroring how the
+// bonus is shown elsewhere as the "SS" half of a preset's MM:SS reading).
+// `field` (one of the PRESET_EDIT_* constants above) is the digit currently
+// being edited; when blinkVisible is false that one digit is blanked so the
+// caller can flash it by toggling blinkVisible on a timer, while every other
+// digit is always drawn normally. Purely draws once; the caller owns the
+// blink timing and the eventual transition back to the preset-select screen.
+void showPresetEditDisplay(uint8_t field, uint8_t hours, uint8_t minTens, uint8_t minOnes,
+                           uint8_t bonusTens, uint8_t bonusOnes, bool blinkVisible,
+                           Adafruit_7segment &d1, Adafruit_7segment &d2);
 
 // Shows game statistics on d1/d2: total playing time so far (not counting
 // paused time) and the current move number. Used when the user taps "-"

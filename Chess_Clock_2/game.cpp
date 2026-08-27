@@ -16,20 +16,32 @@ struct TimePreset {
 };
 
 // 20 duration presets cover a range of common chess time controls, from bullet to classical.
-#define PRESET_COUNT 20
+#define PRESET_COUNT 21
 
 // Presets are stored in EEPROM at address 0, so they can be remembered across power cycles.
 #define EEPROM_PRESET_ADDR 0
 
-// The presets are in order of increasing total time (minutes + bonus), so the user can scroll through them with the + and - buttons.
+// The user-editable custom preset (index PRESET_COUNT-1) is persisted
+// separately: its minutes (0-599, so it needs two bytes) at addresses 2-3,
+// and its bonus seconds (0-59, one byte) at address 4. Address 1 is already
+// used by sound.cpp for the sound on/off preference, so these don't collide
+// with it or with EEPROM_PRESET_ADDR.
+#define EEPROM_CUSTOM_MINUTES_ADDR 2
+#define EEPROM_CUSTOM_BONUS_ADDR   4
+
+// The first 20 presets are in order of increasing total time (minutes + bonus), so the user can
+// scroll through them with the + and - buttons.
 // The presets are: 1:00, 1:01, 2:00, 2:01, 3:00, 3:02, 5:00, 5:03, 10:00, 10:05, 15:00, 15:10, 30:00, 30:15, 45:00, 45:30, 60:00, 60:30, 90:00, 90:30
 // The bonus is in seconds, so 1:01 is 1 minute and 1 second, 2:01 is 2 minutes and 1 second, etc.
+// The 21st entry ({0,0}) is a placeholder for the custom preset; clockInit()
+// overwrites it with whatever was last saved in EEPROM, if anything.
 static TimePreset presets[PRESET_COUNT] = {
     {1, 0}, {1, 1}, {2, 0}, {2, 1},
     {3, 0}, {3, 2}, {5, 0}, {5, 3},
     {10, 0}, {10, 5}, {15, 0}, {15, 10},
     {30, 0}, {30, 15}, {45, 0}, {45, 30},
-    {60, 0}, {60, 30}, {90, 0}, {90, 30}
+    {60, 0}, {60, 30}, {90, 0}, {90, 30},
+    {0, 0}
 };
 
 // The factory default is the 10:05 preset (index 9)
@@ -40,6 +52,18 @@ static uint8_t preset_index = 9;
 // When the user presses PAUSE again after stage 1, we exit TIMESET and return to PAUSED.
 // Pressing + or - during TIMESET adjusts the time for the current stage (player 1 or player 2).
 static uint8_t timesetStage = 0;
+
+// PRESET_EDIT state: lets the user build a custom preset (saved as preset
+// PRESET_COUNT-1, "preset 20") one digit at a time. Entered by long-pressing
+// PAUSE while in SELECT_DURATION. editField walks through the five digits in
+// order (see the PRESET_EDIT_* constants in display.h) via PAUSE presses;
+// + and - change the current digit; editBlinkOn/editBlinkMs drive the
+// flash on whichever digit is currently being edited.
+static uint8_t editField = PRESET_EDIT_HOURS;
+static uint8_t editHours = 0, editMinTens = 0, editMinOnes = 0;
+static uint8_t editBonusTens = 0, editBonusOnes = 0;
+static unsigned long editBlinkMs = 0;
+static bool editBlinkOn = true;
 
 /* ================= Game state ================= */
 static unsigned long base_time;         // The base time for each player, in milliseconds, derived from the selected preset's minutes.
@@ -94,7 +118,8 @@ enum ClockState {
     RUNNING,            // The game is running, and the user can press PAUSE to pause, or tap the seesaw switch to end their turn.
     TIMESET,            // The user can set the time for each player with the + and - buttons, then press PAUSE to return to PAUSED.
     GAME_OVER,          // One player's time has run out, and the user can press PAUSE to reset to PAUSED.
-    SHOW_MOVE_INFO      // Briefly shows total game time + move count; reached from PAUSED via "-", returns to PAUSED after 5s or another "-" tap.
+    SHOW_MOVE_INFO,     // Briefly shows total game time + move count; reached from PAUSED via "-", returns to PAUSED after 5s or another "-" tap.
+    PRESET_EDIT         // Digit-by-digit editor for the custom preset (index PRESET_COUNT-1); reached from SELECT_DURATION via a long PAUSE press.
 };
 
 static ClockState state;
@@ -136,22 +161,50 @@ static void applyPreset() {
 // detect button presses and releases based on the current and previous states of the buttons.
 // See ClockState enum and clockUpdate() for more details.
 
+// Loads the five edit digits from a preset's stored minutes/bonus and
+// (re)draws the editor at the first field. Shared by the entry path below
+// and could be reused if a "restart edit" shortcut is ever added.
+static void enterPresetEdit(uint8_t sourcePresetIdx, Adafruit_7segment &d1, Adafruit_7segment &d2) {
+    unsigned long totalMin = presets[sourcePresetIdx].minutes;  // 0-599, validated at load time
+    editHours    = totalMin / 60;
+    editMinTens  = (totalMin % 60) / 10;
+    editMinOnes  = (totalMin % 60) % 10;
+    editBonusTens = presets[sourcePresetIdx].bonus / 10;
+    editBonusOnes = presets[sourcePresetIdx].bonus % 10;
+
+    editField = PRESET_EDIT_HOURS;
+    editBlinkOn = true;
+    editBlinkMs = millis();
+    showPresetEditDisplay(editField, editHours, editMinTens, editMinOnes,
+                          editBonusTens, editBonusOnes, true, d1, d2);
+}
+
 // SELECT_DURATION
-static void handleSelectDuration(bool plusNow, bool minusNow, bool prevPlus, bool prevMinus, bool pauseReleased,
+static void handleSelectDuration(bool plusNow, bool minusNow, bool prevPlus, bool prevMinus,
+                                 bool pauseReleased, bool pauseLong,
                                  Adafruit_7segment &d1, Adafruit_7segment &d2) {
+    if (ignorePauseRelease) {
+        if (pauseReleased) ignorePauseRelease = false;
+        return;
+    }
+    if (pauseLong) {
+        modeSound();
+        enterPresetEdit(PRESET_COUNT - 1, d1, d2);
+        state = PRESET_EDIT;
+        return;
+    }
     if (PRESSED(plusNow, prevPlus)) {
-        preset_index = (preset_index + 1) % PRESET_COUNT;   //
-        EEPROM.update(EEPROM_PRESET_ADDR, preset_index);    // Save preset selection to EEPROM
+        preset_index = (preset_index + 1) % PRESET_COUNT;
         clickSound();
         showPresetSelect(preset_index, presetTimeMs(preset_index), d1, d2);
     }
     if (PRESSED(minusNow, prevMinus)) {
         preset_index = (preset_index + PRESET_COUNT - 1) % PRESET_COUNT;
-        EEPROM.update(EEPROM_PRESET_ADDR, preset_index);
         clickSound();
         showPresetSelect(preset_index, presetTimeMs(preset_index), d1, d2);
     }
     if (pauseReleased) {
+        EEPROM.update(EEPROM_PRESET_ADDR, preset_index);  // only write once confirmed
         applyPreset();
         showPausedDisplays(d1, player1_time, d2, player2_time);
         state = PAUSED;
@@ -336,9 +389,85 @@ static void handleTimeset(bool pausePressed, bool plusNow, bool prevPlus, bool m
         clickSound();
         unsigned long &t = (timesetStage == 0) ? player1_time : player2_time;
         if (t >= 60000UL) t -= 60000UL; // Subtract 1 minute from a player's time, but don't go below 0
-            showTimeSetDisplay(timesetStage, d1, player1_time, d2, player2_time);
+        showTimeSetDisplay(timesetStage, d1, player1_time, d2, player2_time);
+    }
+}
+
+// PRESET_EDIT
+// Lets the user build a custom time control one digit at a time: hours (0-9),
+// minutes tens (0-5), minutes ones (0-9), then bonus tens (0-5) and bonus
+// ones (0-9). + and - change the current digit (wrapping); a PAUSE press
+// advances to the next digit; after the last one, PAUSE saves the result as
+// preset PRESET_COUNT-1 ("preset 20") to EEPROM, selects it, and returns to
+// SELECT_DURATION showing it like any other preset.
+static void handlePresetEdit(bool pausePressed, bool plusNow, bool prevPlus, bool minusNow, bool prevMinus,
+                             Adafruit_7segment &d1, Adafruit_7segment &d2) {
+    // Flash the digit currently being edited at a steady rate, independent
+    // of button presses (mirrors the running-clock colon blink in spirit).
+    unsigned long now = millis();
+    if (now - editBlinkMs >= 300UL) {
+        editBlinkMs = now;
+        editBlinkOn = !editBlinkOn;
+        showPresetEditDisplay(editField, editHours, editMinTens, editMinOnes,
+                              editBonusTens, editBonusOnes, editBlinkOn, d1, d2);
+    }
+
+    // Which variable the current field edits, and its wraparound ceiling
+    // (5 for the two "tens" digits of a sexagesimal field, 9 otherwise).
+    uint8_t *digit;
+    uint8_t maxVal;
+    switch (editField) {
+        case PRESET_EDIT_MIN_TENS:   digit = &editMinTens;   maxVal = 5; break;
+        case PRESET_EDIT_MIN_ONES:   digit = &editMinOnes;   maxVal = 9; break;
+        case PRESET_EDIT_BONUS_TENS: digit = &editBonusTens; maxVal = 5; break;
+        case PRESET_EDIT_BONUS_ONES: digit = &editBonusOnes; maxVal = 9; break;
+        default:                     digit = &editHours;     maxVal = 9; break;  // PRESET_EDIT_HOURS
+    }
+
+    if (PRESSED(plusNow, prevPlus) || PRESSED(minusNow, prevMinus)) {
+        clickSound();
+        if (PRESSED(plusNow, prevPlus)) {
+            *digit = (*digit >= maxVal) ? 0 : *digit + 1;
+        } else {
+            *digit = (*digit == 0) ? maxVal : *digit - 1;
+        }
+        // Force the just-changed digit fully visible right away, rather
+        // than leaving it mid-blink until the next 300ms tick.
+        editBlinkOn = true;
+        editBlinkMs = millis();
+        showPresetEditDisplay(editField, editHours, editMinTens, editMinOnes,
+                              editBonusTens, editBonusOnes, true, d1, d2);
+    }
+
+    if (pausePressed) {
+        clickSound();
+        if (editField < PRESET_EDIT_BONUS_ONES) {
+            editField++;
+            editBlinkOn = true;
+            editBlinkMs = millis();
+            showPresetEditDisplay(editField, editHours, editMinTens, editMinOnes,
+                                  editBonusTens, editBonusOnes, true, d1, d2);
+        } else {
+            // Last digit confirmed: assemble and save the new preset.
+            uint8_t custom = PRESET_COUNT - 1;
+            uint16_t totalMinutes = (uint16_t)editHours * 60 + editMinTens * 10 + editMinOnes;
+            uint8_t bonusSec = editBonusTens * 10 + editBonusOnes;
+
+            presets[custom].minutes = totalMinutes;
+            presets[custom].bonus = bonusSec;
+            EEPROM.put(EEPROM_CUSTOM_MINUTES_ADDR, totalMinutes);
+            EEPROM.update(EEPROM_CUSTOM_BONUS_ADDR, bonusSec);
+
+            preset_index = custom;
+            EEPROM.update(EEPROM_PRESET_ADDR, preset_index);  // remember it's selected, like picking any other preset
+
+            modeSound();
+            showPresetSelect(preset_index, presetTimeMs(preset_index), d1, d2);
+            ignorePauseRelease = true;  // swallow this same press's release once we're back in SELECT_DURATION
+            state = SELECT_DURATION;
         }
     }
+}
 
 // GAME_OVER
 static void handleGameOver(bool pauseReleased, Adafruit_7segment &d1, Adafruit_7segment &d2) {
@@ -377,6 +506,18 @@ void clockInit(Adafruit_7segment &d1, Adafruit_7segment &d2) {
         preset_index = stored;
     }
 
+    // Load the custom preset (index PRESET_COUNT-1), if one was ever saved.
+    // An erased/unprogrammed EEPROM reads 0xFF per byte (65535 for the
+    // 2-byte minutes field, 255 for the bonus byte); both fail this range
+    // check, so a never-configured board keeps the {0,0} placeholder.
+    uint16_t storedMinutes;
+    EEPROM.get(EEPROM_CUSTOM_MINUTES_ADDR, storedMinutes);
+    uint8_t storedBonus = EEPROM.read(EEPROM_CUSTOM_BONUS_ADDR);
+    if (storedMinutes <= 599 && storedBonus <= 59) {
+        presets[PRESET_COUNT - 1].minutes = storedMinutes;
+        presets[PRESET_COUNT - 1].bonus = storedBonus;
+    }
+
     applyPreset();
     showPresetSelect(preset_index, presetTimeMs(preset_index), d1, d2);
     state = SELECT_DURATION;
@@ -402,7 +543,10 @@ void clockUpdate(bool plusNow, bool prevPlus, bool minusNow, bool prevMinus, // 
 
     switch (state) {
       case SELECT_DURATION:
-        handleSelectDuration(plusNow, minusNow, prevPlus, prevMinus, pauseReleased, d1, d2);
+        handleSelectDuration(plusNow, minusNow, prevPlus, prevMinus, pauseReleased, pauseLong, d1, d2);
+        break;
+      case PRESET_EDIT:
+        handlePresetEdit(pausePressed, plusNow, prevPlus, minusNow, prevMinus, d1, d2);
         break;
       case PAUSED:
         handlePaused(pauseReleased, pauseLong, plusLong, minusLong, minusReleased, minusLongFired, d1, d2);

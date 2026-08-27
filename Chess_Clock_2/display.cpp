@@ -160,6 +160,23 @@ void showSoundStatus(bool enabled, Adafruit_7segment &d1, Adafruit_7segment &d2)
     d2.writeDisplay();
 }
 
+void showPresetEditDisplay(uint8_t field, uint8_t hours, uint8_t minTens, uint8_t minOnes,
+                           uint8_t bonusTens, uint8_t bonusOnes, bool blinkVisible,
+                           Adafruit_7segment &d1, Adafruit_7segment &d2) {
+    d1.clear();
+    if (field != PRESET_EDIT_HOURS    || blinkVisible) d1.writeDigitNum(1, hours);
+    if (field != PRESET_EDIT_MIN_TENS || blinkVisible) d1.writeDigitNum(3, minTens);
+    if (field != PRESET_EDIT_MIN_ONES || blinkVisible) d1.writeDigitNum(4, minOnes);
+    d1.drawColon(true);
+    d1.writeDisplay();
+
+    d2.clear();
+    if (field != PRESET_EDIT_BONUS_TENS || blinkVisible) d2.writeDigitNum(3, bonusTens);
+    if (field != PRESET_EDIT_BONUS_ONES || blinkVisible) d2.writeDigitNum(4, bonusOnes);
+    d2.drawColon(false);
+    d2.writeDisplay();
+}
+
 // Below this, total game time is shown as MM:SS; at or above it, H:MM.
 // Deliberately a lower cutover than HOUR_FORMAT_THRESHOLD_MS above: total
 // game time is a running sum across the whole game, not a single player's
