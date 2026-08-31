@@ -82,11 +82,11 @@
 
 // Brightness actually applied at runtime via setBrightness(); differs by LED color.
 #if DISPLAY_LED_COLOR == DISPLAY_LED_WHITE
-  #define DISPLAY_ON 4
+  #define DISPLAY_ON 15
 #elif DISPLAY_LED_COLOR == DISPLAY_LED_BLUE
-  #define DISPLAY_ON 10
+  #define DISPLAY_ON 15
 #elif DISPLAY_LED_COLOR == DISPLAY_LED_YELLOW
-  #define DISPLAY_ON 8  
+  #define DISPLAY_ON 15  
 #elif DISPLAY_LED_COLOR == DISPLAY_LED_FULL
   #define DISPLAY_ON 15
 #else
